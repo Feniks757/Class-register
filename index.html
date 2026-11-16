@@ -563,11 +563,18 @@
 
         <!-- Выбор группы назначения -->
         <div class="form-group" style="margin-top: 0.5rem;">
-          <label class="form-label">Куда импортировать студентов:</label>
+          <label class="form-label" for="import-target-group-select">Куда импортировать студентов:</label>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <select id="import-target-group-select" class="form-select" style="flex: 1;">
               <!-- Опции групп генерируются JS -->
             </select>
+          </div>
+          <!-- Поле для ввода произвольного названия новой группы -->
+          <div id="import-new-group-box" style="margin-top: 0.5rem;">
+            <label class="form-label" for="import-new-group-name" style="font-size: 0.8rem; color: var(--text-muted);">
+              Название новой группы (можно изменить на любое):
+            </label>
+            <input type="text" id="import-new-group-name" class="form-input" placeholder="Например: ИТ-21 или Веб-разработка" style="font-size: 0.9rem;">
           </div>
           <div id="import-auto-group-hint" style="display: none; font-size: 0.8rem; color: #0284c7; margin-top: 0.25rem;"></div>
         </div>

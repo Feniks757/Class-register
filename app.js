@@ -1547,9 +1547,11 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
     const rawTextarea = document.getElementById('import-raw-textarea');
     const autoGroupHint = document.getElementById('import-auto-group-hint');
     const fileInput = document.getElementById('import-file-input');
+    const newGroupNameInput = document.getElementById('import-new-group-name');
 
     if (fileInput) fileInput.value = '';
     if (rawTextarea) rawTextarea.value = '';
+    if (newGroupNameInput) newGroupNameInput.value = '';
     if (previewContainer) previewContainer.style.display = 'none';
     if (previewTbody) previewTbody.innerHTML = '';
     if (countBadge) countBadge.textContent = '0';
@@ -1560,16 +1562,24 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
     openModal('modal-import-students');
   }
 
+  function toggleNewGroupBox() {
+    const select = document.getElementById('import-target-group-select');
+    const newGroupBox = document.getElementById('import-new-group-box');
+    if (!select || !newGroupBox) return;
+    newGroupBox.style.display = select.value === '__new__' ? 'block' : 'none';
+  }
+
   function updateImportGroupSelect(detectedName = '') {
     const select = document.getElementById('import-target-group-select');
+    const newGroupNameInput = document.getElementById('import-new-group-name');
     if (!select || !state.data || !state.data.groups) return;
 
     select.innerHTML = '';
 
+    const defaultNewName = detectedName || (state.data.groups.length > 0 ? ('Группа ' + (state.data.groups.length + 1)) : 'ИТ-21');
     const optNew = document.createElement('option');
     optNew.value = '__new__';
-    const newName = detectedName || 'Новая группа';
-    optNew.textContent = `➕ Создать новую группу "${newName}"`;
+    optNew.textContent = `➕ Создать новую группу`;
     select.appendChild(optNew);
 
     state.data.groups.forEach(g => {
@@ -1587,6 +1597,12 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
     if (detectedName && !state.data.groups.some(g => g.name.toLowerCase() === detectedName.toLowerCase())) {
       optNew.selected = true;
     }
+
+    if (newGroupNameInput && (!newGroupNameInput.value || detectedName)) {
+      newGroupNameInput.value = defaultNewName;
+    }
+
+    toggleNewGroupBox();
   }
 
   function renderImportPreview(result) {
@@ -1640,7 +1656,9 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
     let targetGroup = null;
 
     if (targetValue === '__new__') {
-      const groupName = state.parsedImportData.groupName || ('Группа ' + (state.data.groups.length + 1));
+      const customNameInput = document.getElementById('import-new-group-name');
+      const rawCustomName = customNameInput ? customNameInput.value.trim() : '';
+      const groupName = rawCustomName || state.parsedImportData.groupName || ('Группа ' + (state.data.groups.length + 1));
       targetGroup = {
         id: 'grp-' + Date.now(),
         name: groupName,
@@ -1999,6 +2017,9 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
 
     // Подтверждение импорта
     document.getElementById('btn-confirm-import')?.addEventListener('click', confirmImport);
+
+    // Переключение видимости поля названия новой группы при смене выбора
+    document.getElementById('import-target-group-select')?.addEventListener('change', toggleNewGroupBox);
 
     // Публикация и настройки GitHub
     document.getElementById('btn-quick-github-sync')?.addEventListener('click', publishToGitHub);
