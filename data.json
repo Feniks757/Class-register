@@ -1,0 +1,9 @@
+{
+  "settings": {
+    "siteTitle": "Электронный журнал успеваемости",
+    "universityName": "Университет / Факультет",
+    "adminPasswordHash": "34ff0cadfda2beec955e89dccaac72e6fbc7636dae031b171f4e5a651b4cb6d0",
+    "salt": "class_register_salt_v1"
+  },
+  "groups": []
+}

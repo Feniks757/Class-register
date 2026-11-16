@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Электронный журнал успеваемости</title>
+  <meta name="description" content="Электронный журнал успеваемости студентов с выбором группы, дедлайнами заданий и подсветкой долгов">
+  <!-- Шрифты и стили -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Экран ввода ключа доступа для студентов -->
+  <div id="student-gate-screen" class="student-gate-screen" style="display: none;">
+    <!-- Кнопка входа для преподавателя прямо на стартовом экране -->
+    <button id="btn-gate-teacher-login" class="btn-gate-teacher" type="button">
+      🔑 Вход для преподавателя
+    </button>
+
+    <div class="student-gate-card">
+      <div class="gate-icon-wrap">🎓</div>
+      <div>
+        <h2 class="gate-title">Электронный журнал</h2>
+        <p class="gate-subtitle">Введите ключ вашей группы</p>
+      </div>
+
+      <form id="form-student-gate" class="gate-form">
+        <input type="text" id="gate-key-input" class="gate-input" autocomplete="off" autofocus required>
+        <div id="gate-error-message" class="gate-error">
+          Неверный ключ доступа. Проверьте номер группы или обратитесь к преподавателю.
+        </div>
+        <button type="submit" class="btn btn-primary" style="padding: 0.85rem; font-size: 1rem; font-weight: 600;">
+          Открыть ведомость группы
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Верхняя панель сайта -->
+  <header class="site-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">📚</div>
+        <div>
+          <div class="brand-title">Электронный журнал</div>
+          <div class="brand-subtitle">Учёт успеваемости и контроль дедлайнов</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Индикатор группы для студента + кнопка смены группы -->
+        <div id="student-unlocked-badge-wrap" style="display: none; align-items: center; gap: 0.5rem;">
+          <span class="student-group-badge">
+            <span>👥 Группа:</span> <b id="student-unlocked-group-name"></b>
+          </span>
+          <button id="btn-student-switch-group" class="btn-switch-group" type="button" title="Выбрать другую группу">
+            Сменить группу
+          </button>
+        </div>
+
+        <!-- Кнопка входа в режим преподавателя -->
+        <button id="btn-admin-login" class="btn btn-secondary btn-sm" type="button">
+          <span>🔑</span> Режим преподавателя
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Информационная полоса режима преподавателя -->
+  <div id="admin-banner" class="admin-banner">
+    <div class="admin-banner-content">
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <span class="admin-badge">Режим редактирования</span>
+        <span>Вы можете изменять баллы (клик по ячейке), редактировать задания и состав групп.</span>
+      </div>
+      <div class="admin-banner-tools">
+        <button id="btn-open-change-password" class="btn btn-outline-light btn-sm" type="button">Сменить пароль</button>
+        <button id="btn-admin-logout" class="btn btn-outline-light btn-sm" type="button">Выйти</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Основное содержимое -->
+  <main class="main-wrapper">
+    
+    <!-- Панель управления и фильтров -->
+    <section class="toolbar-card">
+      <div class="toolbar-primary">
+        <!-- Выбор группы -->
+        <div class="group-selector-wrap">
+          <span class="group-label">Группа:</span>
+          <div id="group-pills-container" class="group-pills">
+            <!-- Кнопки групп генерируются динамически JS -->
+          </div>
+        </div>
+
+        <!-- Поиск студентов -->
+        <div class="search-and-filters">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="student-search-input" class="search-input" placeholder="Поиск по фамилии студента...">
+          </div>
+        </div>
+      </div>
+
+      <!-- Панель инструментов администратора (видна только в режиме преподавателя) -->
+      <div id="admin-toolbar-section" class="admin-toolbar-section">
+        <div class="admin-tools-panel">
+          <div class="admin-tools-header">
+            <span class="admin-tools-title">🛠️ Действия преподавателя</span>
+          </div>
+          <div class="admin-tools-buttons">
+            <button id="btn-add-student" class="btn btn-primary btn-sm" type="button">
+              <span>➕</span> Добавить студента
+            </button>
+            <button id="btn-open-import" class="btn btn-primary btn-sm btn-action-import" type="button">
+              <span>📥</span> Импорт из таблицы
+            </button>
+            <button id="btn-add-assignment" class="btn btn-primary btn-sm" type="button">
+              <span>➕</span> Добавить задание
+            </button>
+            <button id="btn-manage-groups" class="btn btn-secondary btn-sm" type="button">
+              <span>📁</span> Управление группами
+            </button>
+            <button id="btn-quick-github-sync" class="btn btn-success btn-sm" type="button" title="Автоматический коммит прямо на GitHub">
+              <span>🚀</span> Опубликовать на GitHub
+            </button>
+            <button id="btn-open-github-settings" class="btn btn-secondary btn-sm" type="button" title="Настройки токена GitHub">
+              <span>⚙️</span> GitHub
+            </button>
+            <button id="btn-export-data" class="btn btn-secondary btn-sm" type="button">
+              <span>💾</span> Экспорт файла
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Статистика по выбранной группе -->
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-icon blue">👥</div>
+          <div class="stat-content">
+            <div id="stat-students-count" class="stat-value">0</div>
+            <div class="stat-label">Студентов в группе</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon green">📝</div>
+          <div class="stat-content">
+            <div id="stat-assignments-count" class="stat-value">0</div>
+            <div class="stat-label">Всего заданий (ДЗ / КР)</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon amber">📊</div>
+          <div class="stat-content">
+            <div id="stat-group-avg" class="stat-value">0%</div>
+            <div class="stat-label">% сдачи домашних заданий</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-icon red">⚠️</div>
+          <div class="stat-content">
+            <div id="stat-debts-count" class="stat-value" style="color: var(--danger);">0</div>
+            <div class="stat-label">Не сданных ДЗ (долгов)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Легенда статусов -->
+      <div class="legend-bar">
+        <span style="font-weight: 600; color: var(--text-main);">Обозначения:</span>
+        <div class="legend-item">
+          <span><b>🏠 Домашняя работа</b></span>
+        </div>
+        <div class="legend-item">
+          <span><b>🏫 Классная работа</b></span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot graded"></span>
+          <span><b>✓ Сдано</b></span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot late"></span>
+          <span><b>⏰ Сдано с опозданием</b></span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot overdue"></span>
+          <span style="font-weight: 600; color: var(--danger-text);"><b>⚠️ Не сдано</b> (просрочено)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Таблица журнала -->
+    <section class="table-card">
+      <div class="table-responsive">
+        <table class="gradebook-table" id="gradebook-table">
+          <thead>
+            <tr id="table-header-row">
+              <!-- Заголовки таблицы генерируются JS -->
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- Строки студентов генерируются JS -->
+          </tbody>
+        </table>
+
+        <!-- Пустое состояние -->
+        <div id="table-empty-state" class="table-empty-state" style="display: none;">
+          <p style="font-size: 1.1rem; font-weight: 600;">Студенты не найдены</p>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Попробуйте изменить поисковый запрос или добавьте студентов в группу.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Подвал сайта -->
+  <footer class="site-footer">
+    <div class="footer-content">
+      <div>Электронный журнал успеваемости студентов &copy; 2026.</div>
+    </div>
+  </footer>
+
+  <!-- ========================================================================
+       МОДАЛЬНЫЕ ОКНА
+       ======================================================================== -->
+
+  <!-- 1. Модальное окно просмотра описания задания -->
+  <div id="modal-assignment-detail" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-assign-detail-title" class="modal-title">Описание задания</h3>
+        <button class="modal-close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <span id="modal-assign-detail-group" class="assignment-detail-badge" style="background:#f1f5f9; color:var(--text-main);"></span>
+          <span id="modal-assign-detail-type" class="assignment-detail-badge" style="background:#e0e7ff; color:var(--primary);"></span>
+        </div>
+
+        <div class="form-group">
+          <span class="form-label">Срок сдачи (дедлайн):</span>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span id="modal-assign-detail-deadline" style="font-weight: 600; font-size: 0.95rem;"></span>
+            <span id="modal-assign-detail-status" class="assignment-detail-badge"></span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <span class="form-label">Полное описание и требования:</span>
+          <div id="modal-assign-detail-desc" class="assignment-detail-description"></div>
+        </div>
+
+        <!-- Прикреплённое изображение (если есть) -->
+        <div id="modal-assign-detail-image-box" class="form-group" style="display: none;">
+          <span class="form-label">Прикреплённое изображение к заданию:</span>
+          <div class="assignment-modal-image-wrap">
+            <img id="modal-assign-detail-image" class="assignment-modal-image" src="" alt="Иллюстрация к заданию" title="Нажмите, чтобы открыть в новой вкладке">
+          </div>
+        </div>
+
+        <!-- Ссылка на видео (если есть) -->
+        <div id="modal-assign-detail-video-box" class="form-group" style="display: none;">
+          <span class="form-label">Видеоматериал к заданию:</span>
+          <div>
+            <a id="modal-assign-detail-video-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="background:#e11d48; border-color:#e11d48; display:inline-flex; align-items:center; gap:0.4rem;">
+              <span>🎬</span> Смотреть видео к заданию
+            </a>
+          </div>
+        </div>
+
+        <!-- Краткая сводка сдачи задания в группе -->
+        <div class="assignment-stats-box">
+          <div class="assignment-stat-card">
+            <div id="modal-assign-stat-passed" class="assignment-stat-num" style="color: var(--success);">0</div>
+            <div class="assignment-stat-txt">Сдали работу</div>
+          </div>
+          <div class="assignment-stat-card">
+            <div id="modal-assign-stat-debts" class="assignment-stat-num" style="color: var(--danger);">0</div>
+            <div class="assignment-stat-txt">Имеют задолженность</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-assign-btn-edit" class="btn btn-secondary btn-sm" type="button" style="display: none;">
+          <span>✎</span> Редактировать задание
+        </button>
+        <button class="btn btn-primary btn-sm modal-close-btn" type="button">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Модальное окно входа преподавателя (Admin Login) -->
+  <div id="modal-admin-login" class="modal-overlay">
+    <div class="modal-card" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Вход для преподавателя</h3>
+        <button class="modal-close-btn" type="button">&times;</button>
+      </div>
+      <form id="form-admin-login">
+        <div class="modal-body">
+          <p style="font-size: 0.875rem; color: var(--text-muted);">
+            Только преподаватель может изменять оценки, задания и списки групп. Введите пароль доступа.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label" for="admin-password-input">Пароль доступа:</label>
+            <input type="password" id="admin-password-input" class="form-input" placeholder="Введите пароль..." required autocomplete="current-password">
+          </div>
+
+          <div id="admin-login-error" style="display: none; color: var(--danger); font-size: 0.85rem; font-weight: 500;">
+            Неверный пароль.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm modal-close-btn">Отмена</button>
+          <button type="submit" class="btn btn-primary btn-sm">Войти</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Модальное окно создания/редактирования задания -->
+  <div id="modal-assignment-editor" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-assign-editor-title" class="modal-title">Задание</h3>
+        <button class="modal-close-btn" type="button">&times;</button>
+      </div>
+      <form id="form-assignment-editor">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="assign-type-select">Тип задания:</label>
+            <select id="assign-type-select" class="form-select">
+              <option value="homework" selected>🏠 Домашнее задание (сдано / не сдано / сдано с опозданием)</option>
+              <option value="classwork">🏫 Классная работа (текстовое поле / отметка)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="assign-title-input">Название задания:</label>
+            <input type="text" id="assign-title-input" class="form-input" placeholder="Например: ДЗ 1: Верстка макета или КР: Работа на семинаре" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="assign-deadline-input" id="assign-deadline-label">Срок сдачи (Дедлайн):</label>
+            <input type="datetime-local" id="assign-deadline-input" class="form-input" required>
+            <div id="assign-deadline-hint" class="form-hint">Для домашних заданий: несданные до дедлайна работы подсвечиваются красным.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="assign-desc-input">Описание задания и требования:</label>
+            <textarea id="assign-desc-input" class="form-textarea" rows="4" placeholder="Опишите требования, критерии оценивания или прикрепите ссылки..."></textarea>
+          </div>
+
+          <!-- Поле: Ссылка на видео -->
+          <div class="form-group">
+            <label class="form-label" for="assign-video-input">Ссылка на видео:</label>
+            <input type="url" id="assign-video-input" class="form-input" placeholder="https://youtube.com/watch?v=... или Rutube / VK Видео">
+          </div>
+
+          <!-- Прикрепление картинки -->
+          <div class="form-group">
+            <label class="form-label">Прикрепить картинку (схему / скриншот):</label>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <input type="file" id="assign-image-file" class="form-input" accept="image/*" style="flex: 1; padding: 0.4rem;">
+            </div>
+            <div style="margin-top: 0.35rem;">
+              <input type="url" id="assign-image-url" class="form-input" placeholder="Или укажите прямую ссылку на картинку (https://...)">
+            </div>
+            <!-- Превью выбранного изображения -->
+            <div id="assign-image-preview-wrap" class="image-preview-box" style="display: none;">
+              <img id="assign-image-preview" class="image-preview-img" src="" alt="Предпросмотр">
+              <button id="btn-remove-assign-image" type="button" class="btn-remove-image">✕ Удалить</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm modal-close-btn">Отмена</button>
+          <button type="submit" class="btn btn-primary btn-sm">Сохранить задание</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Модальное окно создания/редактирования студента -->
+  <div id="modal-student" class="modal-overlay">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 id="modal-student-title" class="modal-title">Студент</h3>
+        <button class="modal-close-btn" type="button">&times;</button>
+      </div>
+      <form id="form-student">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="student-name-input">Ф. И. О. студента:</label>
+            <input type="text" id="student-name-input" class="form-input" placeholder="например, И. И. И. (или Иванов Иван Иванович)" required>
+            <div class="form-hint">Полное ФИО автоматически преобразуется в формат инициалов <b>Ф. И. О.</b></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm modal-close-btn">Отмена</button>
+          <button type="submit" class="btn btn-primary btn-sm">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. Модальное окно управления группами -->
+  <div id="modal-group-manager" class="modal-overlay">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Управление академическими группами</h3>
+        <button class="modal-close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <span class="form-label">Существующие группы:</span>
+          <div id="group-manager-list" style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <!-- Список групп генерируется JS -->
+          </div>
+        </div>
+
+        <form id="form-add-group" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+          <span class="form-label">Создать новую группу:</span>
+          <input type="text" id="new-group-name" class="form-input" placeholder="Название группы (напр. ИВТ-23)" required>
+          <input type="text" id="new-group-key" class="form-input" placeholder="Ключ доступа для студентов (по умолчанию: как название группы)">
+          <input type="text" id="new-group-dept" class="form-input" placeholder="Направление / Кафедра (необязательно)">
+          <button type="submit" class="btn btn-primary btn-sm">➕ Создать группу</button>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm modal-close-btn">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Модальное окно смены пароля -->
+  <div id="modal-change-password" class="modal-overlay">
+    <div class="modal-card" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Смена пароля преподавателя</h3>
+        <button class="modal-close-btn" type="button">&times;</button>
+      </div>
+      <form id="form-change-password">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="current-password-input">Текущий пароль:</label>
+            <input type="password" id="current-password-input" class="form-input" required autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-password-input">Новый пароль:</label>
+            <input type="password" id="new-password-input" class="form-input" required minlength="4" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="confirm-password-input">Повторите новый пароль:</label>
+            <input type="password" id="confirm-password-input" class="form-input" required minlength="4" autocomplete="new-password">
+          </div>
+          <div id="change-password-error" style="display: none; color: var(--danger); font-size: 0.85rem; font-weight: 500;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm modal-close-btn">Отмена</button>
+          <button type="submit" class="btn btn-primary btn-sm">Обновить пароль</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 7. Модальное окно экспорта / публикации на GitHub Pages -->
+  <div id="modal-export-data" class="modal-overlay">
+    <div class="modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Экспорт и публикация на GitHub Pages</h3>
+        <button class="modal-close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; line-height: 1.5; color: var(--text-muted);">
+          Чтобы все внесённые вами оценки и задания отобразились на вашем сайте <b>GitHub Pages</b> для студентов:
+        </p>
+
+        <ol style="font-size: 0.875rem; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; color: var(--text-main);">
+          <li>
+            Нажмите кнопку <b>«Скачать data.json»</b> и сохраните файл в папку вашего репозитория (заменив старый).
+          </li>
+          <li>
+            (Рекомендуется) Также нажмите <b>«Скачать data.js»</b> и сохраните его в ту же папку (для гарантированной работы без CORS).
+          </li>
+          <li>
+            Сделайте коммит и отправьте изменения в GitHub:
+            <code style="display:block; margin-top:0.3rem; background:#f1f5f9; padding:0.4rem; border-radius:4px; font-size:0.8rem;">
+              git add data.json data.js<br>
+              git commit -m "Update grades"<br>
+              git push
+            </code>
+          </li>
+          <li>Через 1-2 минуты изменения обновятся на вашем сайте GitHub Pages!</li>
+        </ol>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+          <button id="btn-download-json" class="btn btn-primary btn-sm" type="button">
+            📥 Скачать data.json
+          </button>
+          <button id="btn-download-js" class="btn btn-secondary btn-sm" type="button">
+            📥 Скачать data.js
+          </button>
+          <button id="btn-copy-json" class="btn btn-secondary btn-sm" type="button">
+            📋 Скопировать JSON
+          </button>
+        </div>
+
+        <div class="form-group" style="margin-top: 0.5rem;">
+          <label class="form-label" for="export-json-preview">Предпросмотр данных JSON:</label>
+          <textarea id="export-json-preview" class="form-textarea" rows="6" readonly style="font-family: monospace; font-size: 0.78rem;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-sm modal-close-btn">Понятно</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Модальное окно импорта списка студентов из файла-таблицы -->
+  <div id="modal-import-students" class="modal-overlay">
+    <div class="modal-card" style="max-width: 640px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Импорт студентов из файла таблицы</h3>
+        <button class="modal-close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.4;">
+          Загрузите файл таблицы (<b>HTML-отчёт ИСУ ИТМО / Oracle BI</b>, выгрузку <b>CSV / TSV</b> или скопируйте список студентов из Excel).
+        </p>
+
+        <!-- Зона загрузки файла -->
+        <div id="import-dropzone" class="file-dropzone">
+          <div class="dropzone-icon">📄</div>
+          <div style="font-weight: 600; color: var(--text-main);">Нажмите для выбора файла или перетащите его сюда</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+            Поддерживаются файлы .html, .htm, .csv, .txt, .tsv
+          </div>
+          <input type="file" id="import-file-input" accept=".html,.htm,.csv,.txt,.tsv" style="display: none;">
+        </div>
+
+        <!-- Или вставка текста вручную -->
+        <div class="form-group" style="margin-top: 0.5rem;">
+          <details>
+            <summary style="font-size: 0.85rem; font-weight: 600; color: var(--primary); cursor: pointer;">
+              Или вставить текст / HTML таблицы вручную
+            </summary>
+            <textarea id="import-raw-textarea" class="form-textarea" rows="4" placeholder="Вставьте сюда скопированную таблицу или список ФИО..." style="margin-top: 0.4rem; font-size: 0.8rem;"></textarea>
+            <button id="btn-parse-textarea" type="button" class="btn btn-secondary btn-sm" style="margin-top: 0.4rem;">
+              Распознать из текста
+            </button>
+          </details>
+        </div>
+
+        <!-- Выбор группы назначения -->
+        <div class="form-group" style="margin-top: 0.5rem;">
+          <label class="form-label">Куда импортировать студентов:</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <select id="import-target-group-select" class="form-select" style="flex: 1;">
+              <!-- Опции групп генерируются JS -->
+            </select>
+          </div>
+          <div id="import-auto-group-hint" style="display: none; font-size: 0.8rem; color: #0284c7; margin-top: 0.25rem;"></div>
+        </div>
+
+        <!-- Предпросмотр распознанных студентов -->
+        <div id="import-preview-container" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+            <span class="form-label" style="margin: 0;">Распознано студентов: <b id="import-count-badge">0</b></span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Проверьте список перед добавлением</span>
+          </div>
+          <div class="import-preview-box">
+            <table class="import-preview-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;">№</th>
+                  <th>Ф.И.О. студента</th>
+                  <th style="width: 80px;">Статус</th>
+                </tr>
+              </thead>
+              <tbody id="import-preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm modal-close-btn">Отмена</button>
+        <button id="btn-confirm-import" type="button" class="btn btn-primary btn-sm" disabled>
+          ➕ Добавить студентов в журнал
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. Модальное окно настроек автоматической публикации на GitHub -->
+  <div id="modal-github-settings" class="modal-overlay">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Настройки публикации на GitHub</h3>
+        <button class="modal-close-btn" type="button">&times;</button>
+      </div>
+      <form id="form-github-settings">
+        <div class="modal-body">
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">
+            Настройте интеграцию с GitHub REST API, чтобы сайт мог <b>автоматически создавать коммиты</b> при изменении оценок прямо из браузера!
+          </p>
+
+          <div id="github-connection-status" class="github-status-card disconnected">
+            <span>⚪ Интеграция не настроена</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="github-owner-input">Имя пользователя / Организация GitHub:</label>
+            <input type="text" id="github-owner-input" class="form-input" placeholder="например: fidor-dev" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="github-repo-input">Название репозитория:</label>
+            <input type="text" id="github-repo-input" class="form-input" placeholder="например: class-register" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="github-branch-input">Ветка для GitHub Pages:</label>
+            <input type="text" id="github-branch-input" class="form-input" value="main" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="github-token-input">GitHub Personal Access Token (Токен доступа):</label>
+            <input type="password" id="github-token-input" class="form-input" placeholder="ghp_... или github_pat_..." autocomplete="off">
+            <div class="form-hint">
+              🔒 Токен сохраняется <b>только в вашем браузере</b> (localStorage). Он нужен для отправки коммитов от вашего имени.
+              <br>Создать токен можно на GitHub: <code>Settings → Developer Settings → Personal access tokens → Tokens (classic)</code> с галочкой <code>repo</code>.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm modal-close-btn">Отмена</button>
+          <button id="btn-test-github-conn" type="button" class="btn btn-secondary btn-sm">Проверить связь</button>
+          <button type="submit" class="btn btn-primary btn-sm">Сохранить настройки</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Контейнер всплывающих уведомлений -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Скрипты: сначала дефолтные данные (для оффлайн/file:/// совместимости), затем логика -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
