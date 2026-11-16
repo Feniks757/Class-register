@@ -154,6 +154,46 @@
           "grades": {}
         }
       ]
+    },
+    {
+      "id": "grp-1794847768365",
+      "name": "ЖиЦ 1.3",
+      "key": "1.3",
+      "department": "Живопись и цветоведение",
+      "assignments": [],
+      "students": []
+    },
+    {
+      "id": "grp-1794847787752",
+      "name": "ЖиЦ 1.1",
+      "key": "1.1",
+      "department": "Живопись и цветоведение",
+      "assignments": [],
+      "students": []
+    },
+    {
+      "id": "grp-1794847806404",
+      "name": "ЖиЦ 1.4",
+      "key": "1.4",
+      "department": "Живопись и цветоведение",
+      "assignments": [],
+      "students": []
+    },
+    {
+      "id": "grp-1794847830595",
+      "name": "ЖиЦ 1.2",
+      "key": "1.2",
+      "department": "Живопись и цветоведение",
+      "assignments": [],
+      "students": []
+    },
+    {
+      "id": "grp-1794847842207",
+      "name": "ЖиЦ 1.5",
+      "key": "1.5",
+      "department": "Живопись и цветоведение",
+      "assignments": [],
+      "students": []
     }
   ]
 }
