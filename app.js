@@ -21,7 +21,7 @@
     selectedAssignmentId: null,
     editingStudentId: null,
     editingAssignmentId: null,
-    editingAssignmentImage: null,
+    editingAssignmentImages: [], // Массив картинок для текущего редактируемого задания
     parsedImportData: null,
     githubSettings: {
       owner: '',
@@ -31,146 +31,28 @@
     }
   };
 
-  /* ==========================================================================
-     Утилиты для работы с именами (Ф. И. О.), датами и форматированием
-     ========================================================================== */
+  // Импорт вспомогательных функций из модулей
+  const {
+    formatToInitials,
+    isDeadlinePassed,
+    formatShortDeadline,
+    formatFullDeadline,
+    getDeadlineTimeRemainingText,
+    computeHash,
+    showToast,
+    escapeHtml,
+    extractLinks,
+    getLinkMeta,
+    extractImages,
+    utf8ToBase64,
+    compressImageFile,
+    idbGet,
+    idbSet,
+    idbDelete
+  } = window.AppUtils;
 
-  /**
-   * Форматирует имя в инициалы вида "Ф. И. О." (например, "И. И. И." или "А. М. О.")
-   */
-  function formatToInitials(nameStr) {
-    if (!nameStr) return '';
-    const trimmed = nameStr.trim();
-
-    // Если уже в формате трёх инициалов (напр. "И. И. И." или "И.И.И." или "И И И")
-    const match3 = trimmed.match(/^([А-Яа-яA-Za-z])[\.\s]+([А-Яа-яA-Za-z])[\.\s]+([А-Яа-яA-Za-z])[\.]?$/);
-    if (match3) {
-      return `${match3[1].toUpperCase()}. ${match3[2].toUpperCase()}. ${match3[3].toUpperCase()}.`;
-    }
-
-    // Если строка из двух инициалов (напр. "И. И." или "И.И.")
-    const match2 = trimmed.match(/^([А-Яа-яA-Za-z])[\.\s]+([А-Яа-яA-Za-z])[\.]?$/);
-    if (match2) {
-      return `${match2[1].toUpperCase()}. ${match2[2].toUpperCase()}.`;
-    }
-
-    // Если полное имя из слов ("Иванов Иван Иванович" -> "И. И. И.")
-    const words = trimmed.split(/[\s\-]+/).filter(Boolean);
-    if (words.length > 0) {
-      return words.map(w => w[0].toUpperCase() + '.').join(' ');
-    }
-    return trimmed;
-  }
-
-  /**
-   * Проверяет, просрочен ли дедлайн по сравнению с текущим моментом
-   */
-  function isDeadlinePassed(deadlineStr) {
-    if (!deadlineStr) return false;
-    const deadline = new Date(deadlineStr);
-    return deadline.getTime() < Date.now();
-  }
-
-  /**
-   * Форматирует дату для бейджей в заголовках колонок (напр., "до 15 окт.")
-   */
-  function formatShortDeadline(deadlineStr) {
-    if (!deadlineStr) return 'Без срока';
-    const d = new Date(deadlineStr);
-    const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-    const day = d.getDate();
-    const month = months[d.getMonth()];
-    const hours = String(d.getHours()).padStart(2, '0');
-    const mins = String(d.getMinutes()).padStart(2, '0');
-    return `${day} ${month}, ${hours}:${mins}`;
-  }
-
-  /**
-   * Форматирует полную дату и время для модального окна (напр., "15 октября 2026 г., 23:59")
-   */
-  function formatFullDeadline(deadlineStr) {
-    if (!deadlineStr) return 'Бессрочно';
-    const d = new Date(deadlineStr);
-    return d.toLocaleString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-
-  /**
-   * Вычисляет оставшееся или прошедшее время до дедлайна
-   */
-  function getDeadlineTimeRemainingText(deadlineStr) {
-    if (!deadlineStr) return { text: 'Бессрочно', isPassed: false };
-    const deadline = new Date(deadlineStr).getTime();
-    const now = Date.now();
-    const diffMs = deadline - now;
-    const isPassed = diffMs < 0;
-    const absDiff = Math.abs(diffMs);
-
-    const diffDays = Math.floor(absDiff / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor((absDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-    if (isPassed) {
-      if (diffDays > 0) {
-        return { text: `Дедлайн прошёл ${diffDays} дн. назад`, isPassed: true };
-      }
-      return { text: `Дедлайн прошёл ${diffHours} ч. назад`, isPassed: true };
-    } else {
-      if (diffDays > 0) {
-        return { text: `Осталось: ${diffDays} дн. ${diffHours} ч.`, isPassed: false };
-      }
-      return { text: `Осталось: ${diffHours} ч.`, isPassed: false };
-    }
-  }
-
-  /**
-   * Вычисляет SHA-256 хеш строки с солью
-   */
-  async function computeHash(str, salt) {
-    const encoder = new TextEncoder();
-    const salted = encoder.encode(str + ':' + salt);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', salted);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  /* ==========================================================================
-     Уведомления (Toast)
-     ========================================================================== */
-  function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    let icon = 'ℹ️';
-    if (type === 'success') icon = '✅';
-    if (type === 'error') icon = '⚠️';
-
-    toast.innerHTML = `<span>${icon}</span> <span>${escapeHtml(message)}</span>`;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(10px)';
-      toast.style.transition = 'all 0.25s ease';
-      setTimeout(() => toast.remove(), 300);
-    }, 3200);
-  }
-
-  function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
+  const { parseStudentsFromHTML, parseStudentsFromText, parseFileContent } = window.AppParser;
+  const { updateGitHubStatusCard, testGitHubConnection, commitFileToGitHub } = window.AppGitHub;
 
   /* ==========================================================================
      Загрузка и сохранение данных
@@ -181,17 +63,37 @@
     localStorage.removeItem('class_register_data_v1');
     localStorage.removeItem('class_register_data_v2');
 
-    // 1. Попытка загрузить из localStorage (для сессии редактирования)
+    // 1. Попытка загрузить из localStorage
+    let localData = null;
     const local = localStorage.getItem(STORAGE_KEY);
     if (local) {
       try {
-        state.data = JSON.parse(local);
+        localData = JSON.parse(local);
       } catch (e) {
         console.warn('Ошибка парсинга localStorage:', e);
       }
     }
 
-    // 2. Если данных нет, пробуем data.json или data.js
+    // 2. Попытка загрузить из надежного хранилища IndexedDB (где нет лимита 5 МБ)
+    let idbData = null;
+    if (idbGet) {
+      try {
+        idbData = await idbGet(STORAGE_KEY);
+      } catch (err) {
+        console.warn('Ошибка чтения IndexedDB:', err);
+      }
+    }
+
+    // Выбираем наиболее свежие данные между localStorage и IndexedDB
+    if (localData && idbData) {
+      const localTime = localData.lastModified || 0;
+      const idbTime = idbData.lastModified || 0;
+      state.data = idbTime >= localTime ? idbData : localData;
+    } else {
+      state.data = localData || idbData || null;
+    }
+
+    // 3. Если данных нет, пробуем data.json или data.js
     if (!state.data) {
       try {
         const resp = await fetch('data.json');
@@ -203,7 +105,7 @@
       }
     }
 
-    // 3. Fallback на глобальный объект window.DEFAULT_REGISTER_DATA
+    // 4. Fallback на глобальный объект window.DEFAULT_REGISTER_DATA
     if (!state.data && window.DEFAULT_REGISTER_DATA) {
       state.data = JSON.parse(JSON.stringify(window.DEFAULT_REGISTER_DATA));
     }
@@ -262,16 +164,28 @@
     renderApp();
   }
 
-  function saveData(notify = true) {
+  function saveData(notify = false) {
     if (!state.data) return;
+
+    state.data.lastModified = Date.now();
+
+    // 1. Асинхронно сохраняем в IndexedDB (без лимита в 5 МБ)
+    if (idbSet) {
+      idbSet(STORAGE_KEY, state.data).catch(err => {
+        console.warn('IndexedDB save error:', err);
+      });
+    }
+
+    // 2. Сохраняем в localStorage для мгновенного синхронного доступа
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
-      if (notify) {
-        showToast('Изменения сохранены локально', 'success');
-      }
     } catch (e) {
-      console.error('Ошибка сохранения:', e);
-      showToast('Ошибка сохранения данных', 'error');
+      // При превышении квоты localStorage (5 МБ) данные все равно сохранены в памяти и IndexedDB
+      console.warn('Предупреждение: превышена квота localStorage (5 МБ). Данные сохранены в IndexedDB.', e);
+    }
+
+    if (notify) {
+      showToast('Изменения сохранены локально', 'success');
     }
   }
 
@@ -541,8 +455,10 @@
       const deadlineClass = isPassed ? 'passed' : 'upcoming';
       const deadlineShort = formatShortDeadline(assign.deadline);
 
-      const hasImage = Boolean(assign.image);
-      const hasVideo = Boolean(assign.videoUrl);
+      const assignImages = extractImages(assign.images || assign.image);
+      const hasImages = assignImages.length > 0;
+      const assignLinks = extractLinks(assign.videoUrl);
+      const hasLinks = assignLinks.length > 0;
 
       thAssign.innerHTML = `
         <div class="assignment-header-inner">
@@ -557,10 +473,11 @@
             <span class="deadline-tag ${deadlineClass}" title="Срок: ${formatFullDeadline(assign.deadline)}">
               ${isPassed ? '⏰ ' : '📅 '} ${deadlineShort}
             </span>
-            ${hasImage ? '<span class="assignment-image-indicator" title="Прикреплена картинка/схема">🖼️ Картинка</span>' : ''}
-            ${hasVideo ? '<span class="assignment-video-indicator" title="Прикреплено видео">🎬 Видео</span>' : ''}
+            ${hasImages ? `<span class="assignment-image-indicator" title="${assignImages.length > 1 ? assignImages.length + ' изображений' : 'Прикреплена картинка/схема'}">🖼️ ${assignImages.length > 1 ? assignImages.length + ' фото' : 'Картинка'}</span>` : ''}
+            ${hasLinks ? `<span class="assignment-video-indicator" title="${assignLinks.length > 1 ? assignLinks.length + ' ссылок на материалы' : 'Прикреплена ссылка на материалы'}">🔗 ${assignLinks.length > 1 ? assignLinks.length + ' ссылки' : 'Ссылка'}</span>` : ''}
           </div>
           <div class="assignment-admin-actions">
+            <button class="btn btn-secondary btn-sm" style="padding: 2px 5px; font-size: 0.72rem;" title="Скопировать в другие группы" data-copy-assign="${assign.id}">📑</button>
             <button class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 0.72rem;" data-edit-assign="${assign.id}">✎ Изм.</button>
             <button class="btn btn-outline-danger btn-sm" style="padding: 2px 6px; font-size: 0.72rem;" data-delete-assign="${assign.id}">🗑</button>
           </div>
@@ -569,7 +486,7 @@
 
       // Клик по заголовку открывает модалку с описанием задания
       thAssign.addEventListener('click', (e) => {
-        if (e.target.closest('[data-edit-assign]') || e.target.closest('[data-delete-assign]')) return;
+        if (e.target.closest('[data-copy-assign]') || e.target.closest('[data-edit-assign]') || e.target.closest('[data-delete-assign]')) return;
         openAssignmentDetailModal(assign.id);
       });
 
@@ -797,10 +714,26 @@
      Модальные окна
      ========================================================================== */
 
+  function updateModalBodyLock() {
+    const hasActiveModal = document.querySelector('.modal-overlay.active') !== null;
+    const lightbox = document.getElementById('modal-image-lightbox');
+    const hasActiveLightbox = lightbox && (lightbox.style.display === 'flex' || lightbox.style.display === 'block');
+    if (hasActiveModal || hasActiveLightbox) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+  }
+
   function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
       modal.classList.add('active');
+      const modalBody = modal.querySelector('.modal-body');
+      if (modalBody) {
+        modalBody.scrollTop = 0;
+      }
+      updateModalBodyLock();
     }
   }
 
@@ -808,7 +741,126 @@
     const modal = document.getElementById(modalId);
     if (modal) {
       modal.classList.remove('active');
+      updateModalBodyLock();
     }
+  }
+
+  /* ==========================================================================
+     Полноэкранный просмотр изображений (Lightbox / Карусель)
+     ========================================================================== */
+
+  let lightboxState = {
+    images: [],
+    currentIndex: 0,
+    titlePrefix: ''
+  };
+
+  function openLightbox(imagesInput, startIndex = 0, titlePrefix = '') {
+    let images = [];
+    if (Array.isArray(imagesInput)) {
+      images = imagesInput.filter(Boolean);
+    } else if (typeof imagesInput === 'string' && imagesInput) {
+      images = [imagesInput];
+    }
+    if (images.length === 0) return;
+
+    lightboxState.images = images;
+    lightboxState.currentIndex = Math.max(0, Math.min(startIndex, images.length - 1));
+    lightboxState.titlePrefix = titlePrefix || '';
+
+    renderLightboxSlide();
+
+    const lightbox = document.getElementById('modal-image-lightbox');
+    if (lightbox) {
+      lightbox.style.display = 'flex';
+      updateModalBodyLock();
+    }
+  }
+
+  function renderLightboxSlide() {
+    const { images, currentIndex, titlePrefix } = lightboxState;
+    if (images.length === 0) return;
+
+    const currentSrc = images[currentIndex];
+    const img = document.getElementById('lightbox-img');
+    const cap = document.getElementById('lightbox-caption');
+    const counter = document.getElementById('lightbox-counter');
+    const ext = document.getElementById('lightbox-open-external');
+    const prevBtn = document.getElementById('lightbox-prev-btn');
+    const nextBtn = document.getElementById('lightbox-next-btn');
+    const thumbsBar = document.getElementById('lightbox-thumbs-bar');
+
+    if (img) {
+      img.src = currentSrc;
+      img.alt = `Иллюстрация ${currentIndex + 1}`;
+    }
+
+    if (counter) {
+      if (images.length > 1) {
+        counter.style.display = 'inline-block';
+        counter.textContent = `${currentIndex + 1} / ${images.length}`;
+      } else {
+        counter.style.display = 'none';
+      }
+    }
+
+    if (cap) {
+      const prefix = titlePrefix ? `${titlePrefix}` : 'Иллюстрация';
+      cap.textContent = images.length > 1 ? `${prefix} (фото ${currentIndex + 1} из ${images.length})` : prefix;
+    }
+
+    if (ext) {
+      ext.href = currentSrc;
+      ext.style.display = currentSrc.startsWith('http') || currentSrc.startsWith('data:') ? 'inline-flex' : 'none';
+    }
+
+    // Кнопки перелистывания видны только если фото больше одного
+    if (prevBtn) prevBtn.style.display = images.length > 1 ? 'flex' : 'none';
+    if (nextBtn) nextBtn.style.display = images.length > 1 ? 'flex' : 'none';
+
+    // Лента миниатюр внизу экрана
+    if (thumbsBar) {
+      if (images.length > 1) {
+        thumbsBar.style.display = 'flex';
+        thumbsBar.innerHTML = '';
+        images.forEach((src, idx) => {
+          const thumb = document.createElement('div');
+          thumb.className = `lightbox-thumb-item ${idx === currentIndex ? 'active' : ''}`;
+          thumb.title = `Перейти к фото ${idx + 1}`;
+          thumb.innerHTML = `<img src="${escapeHtml(src)}" alt="Миниатюра ${idx + 1}">`;
+          thumb.onclick = (e) => {
+            e.stopPropagation();
+            lightboxState.currentIndex = idx;
+            renderLightboxSlide();
+          };
+          thumbsBar.appendChild(thumb);
+        });
+      } else {
+        thumbsBar.style.display = 'none';
+        thumbsBar.innerHTML = '';
+      }
+    }
+  }
+
+  function lightboxNext() {
+    if (lightboxState.images.length <= 1) return;
+    lightboxState.currentIndex = (lightboxState.currentIndex + 1) % lightboxState.images.length;
+    renderLightboxSlide();
+  }
+
+  function lightboxPrev() {
+    if (lightboxState.images.length <= 1) return;
+    lightboxState.currentIndex = (lightboxState.currentIndex - 1 + lightboxState.images.length) % lightboxState.images.length;
+    renderLightboxSlide();
+  }
+
+  function closeLightbox() {
+    const lightbox = document.getElementById('modal-image-lightbox');
+    if (!lightbox) return;
+    lightbox.style.display = 'none';
+    const img = document.getElementById('lightbox-img');
+    if (img) img.src = '';
+    updateModalBodyLock();
   }
 
   // Клик вне карточки модалки закрывает её
@@ -816,6 +868,7 @@
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) {
         overlay.classList.remove('active');
+        updateModalBodyLock();
       }
     });
   });
@@ -824,7 +877,10 @@
   document.querySelectorAll('.modal-close-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const modal = e.target.closest('.modal-overlay');
-      if (modal) modal.classList.remove('active');
+      if (modal) {
+        modal.classList.remove('active');
+        updateModalBodyLock();
+      }
     });
   });
 
@@ -874,30 +930,127 @@
       descEl.textContent = assign.description || 'Описание задания отсутствует.';
     }
 
-    // Отображение прикрепленного изображения
+    // Отображение прикрепленных изображений (галерея / карусель)
     const imageBox = document.getElementById('modal-assign-detail-image-box');
-    const imageEl = document.getElementById('modal-assign-detail-image');
-    if (imageBox && imageEl) {
-      if (assign.image) {
+    const imagesGallery = document.getElementById('modal-assign-detail-images-gallery');
+    const assignImages = extractImages(assign.images || assign.image);
+
+    if (imageBox && imagesGallery) {
+      if (assignImages.length === 1) {
         imageBox.style.display = 'block';
-        imageEl.src = assign.image;
-        imageEl.onclick = () => window.open(assign.image, '_blank');
+        imagesGallery.innerHTML = '';
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'assignment-modal-gallery-item';
+        imgWrap.title = 'Кликните для просмотра в полном размере';
+        imgWrap.innerHTML = `
+          <img src="${escapeHtml(assignImages[0])}" alt="Иллюстрация к заданию" loading="lazy">
+          <div class="gallery-item-badge">🔍 Полноразмерный просмотр</div>
+        `;
+        imgWrap.onclick = () => openLightbox(assignImages, 0, assign.title);
+        imagesGallery.appendChild(imgWrap);
+      } else if (assignImages.length > 1) {
+        imageBox.style.display = 'block';
+        imagesGallery.innerHTML = '';
+
+        let cardCurrentIndex = 0;
+        const carouselWrap = document.createElement('div');
+        carouselWrap.className = 'card-carousel';
+
+        carouselWrap.innerHTML = `
+          <div class="card-carousel-main" title="Кликните для открытия полноэкранного просмотра">
+            <img id="card-carousel-active-img" src="${escapeHtml(assignImages[0])}" alt="Иллюстрация 1">
+            <button type="button" class="card-carousel-nav-btn card-carousel-prev" title="Предыдущее фото (←)">&#10094;</button>
+            <button type="button" class="card-carousel-nav-btn card-carousel-next" title="Следующее фото (→)">&#10095;</button>
+            <div class="card-carousel-badge" id="card-carousel-badge">1 / ${assignImages.length}</div>
+            <div class="card-carousel-fullscreen-hint">🔍 На весь экран</div>
+          </div>
+          <div class="card-carousel-thumbs" id="card-carousel-thumbs">
+            ${assignImages.map((src, i) => `
+              <div class="card-carousel-thumb-item ${i === 0 ? 'active' : ''}" data-index="${i}" title="Фото ${i + 1}">
+                <img src="${escapeHtml(src)}" alt="Миниатюра ${i + 1}">
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        const activeImg = carouselWrap.querySelector('#card-carousel-active-img');
+        const badgeEl = carouselWrap.querySelector('#card-carousel-badge');
+        const prevBtn = carouselWrap.querySelector('.card-carousel-prev');
+        const nextBtn = carouselWrap.querySelector('.card-carousel-next');
+        const thumbs = carouselWrap.querySelectorAll('.card-carousel-thumb-item');
+
+        function updateCardSlide(newIdx) {
+          cardCurrentIndex = (newIdx + assignImages.length) % assignImages.length;
+          activeImg.src = assignImages[cardCurrentIndex];
+          activeImg.alt = `Иллюстрация ${cardCurrentIndex + 1}`;
+          badgeEl.textContent = `${cardCurrentIndex + 1} / ${assignImages.length}`;
+          thumbs.forEach((th, i) => {
+            th.classList.toggle('active', i === cardCurrentIndex);
+          });
+        }
+
+        prevBtn.onclick = (e) => {
+          e.stopPropagation();
+          updateCardSlide(cardCurrentIndex - 1);
+        };
+
+        nextBtn.onclick = (e) => {
+          e.stopPropagation();
+          updateCardSlide(cardCurrentIndex + 1);
+        };
+
+        thumbs.forEach((th, i) => {
+          th.onclick = (e) => {
+            e.stopPropagation();
+            updateCardSlide(i);
+          };
+        });
+
+        // Клик по основному изображению открывает полноэкранный Lightbox на текущем фото
+        carouselWrap.querySelector('.card-carousel-main').onclick = (e) => {
+          if (e.target.closest('.card-carousel-nav-btn')) return;
+          openLightbox(assignImages, cardCurrentIndex, assign.title);
+        };
+
+        imagesGallery.appendChild(carouselWrap);
       } else {
         imageBox.style.display = 'none';
-        imageEl.src = '';
+        imagesGallery.innerHTML = '';
       }
     }
 
-    // Отображение ссылки на видеоматериал
+    // Отображение ссылок и материалов к заданию
     const videoBox = document.getElementById('modal-assign-detail-video-box');
-    const videoLink = document.getElementById('modal-assign-detail-video-link');
-    if (videoBox && videoLink) {
-      if (assign.videoUrl) {
+    const linksList = document.getElementById('modal-assign-detail-links-list');
+    const linksLabel = document.getElementById('modal-assign-detail-links-label');
+    const assignLinks = extractLinks(assign.videoUrl);
+
+    if (videoBox && linksList) {
+      if (assignLinks.length > 0) {
         videoBox.style.display = 'block';
-        videoLink.href = assign.videoUrl;
+        if (linksLabel) {
+          linksLabel.textContent = assignLinks.length === 1 ? 'Ссылка на материал к заданию:' : `Полезные ссылки и материалы (${assignLinks.length}):`;
+        }
+        linksList.innerHTML = '';
+        assignLinks.forEach((url, i) => {
+          const meta = getLinkMeta(url);
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.className = 'btn btn-primary btn-sm';
+          a.style.cssText = `background:${meta.bg}; border-color:${meta.border}; display:inline-flex; align-items:center; gap:0.4rem; max-width:100%; word-break:break-all; text-align:left; line-height:1.3; padding:0.45rem 0.85rem;`;
+          
+          let displayUrl = url.replace(/^https?:\/\//i, '');
+          if (displayUrl.length > 55) {
+            displayUrl = displayUrl.slice(0, 52) + '...';
+          }
+          a.innerHTML = `<span>${meta.icon}</span> <span><b>${meta.label}</b>: <span style="opacity:0.9; font-weight:normal; font-size:0.8rem;">${escapeHtml(displayUrl)}</span></span>`;
+          linksList.appendChild(a);
+        });
       } else {
         videoBox.style.display = 'none';
-        videoLink.href = '#';
+        linksList.innerHTML = '';
       }
     }
 
@@ -927,7 +1080,16 @@
       if (statDebtsEl) statDebtsEl.textContent = debtCount;
     }
 
-    // Кнопка редактирования задания из модалки для админа
+    // Кнопки копирования и редактирования задания из модалки для админа
+    const copyBtn = document.getElementById('modal-assign-btn-copy');
+    if (copyBtn) {
+      copyBtn.style.display = state.isAdmin ? 'inline-flex' : 'none';
+      copyBtn.onclick = () => {
+        closeModal('modal-assignment-detail');
+        openCopyAssignmentModal(assign.id);
+      };
+    }
+
     if (editBtn) {
       editBtn.style.display = state.isAdmin ? 'inline-flex' : 'none';
       editBtn.onclick = () => {
@@ -994,21 +1156,36 @@
      ========================================================================== */
 
   function updateImageEditorPreview() {
-    const previewWrap = document.getElementById('assign-image-preview-wrap');
-    const previewImg = document.getElementById('assign-image-preview');
-    const urlInput = document.getElementById('assign-image-url');
+    const previewList = document.getElementById('assign-images-preview-list');
+    if (!previewList) return;
 
-    if (state.editingAssignmentImage) {
-      if (previewWrap) previewWrap.style.display = 'flex';
-      if (previewImg) previewImg.src = state.editingAssignmentImage;
-      if (urlInput && state.editingAssignmentImage.startsWith('http')) {
-        urlInput.value = state.editingAssignmentImage;
-      }
-    } else {
-      if (previewWrap) previewWrap.style.display = 'none';
-      if (previewImg) previewImg.src = '';
-      if (urlInput) urlInput.value = '';
+    if (!state.editingAssignmentImages || state.editingAssignmentImages.length === 0) {
+      previewList.style.display = 'none';
+      previewList.innerHTML = '';
+      return;
     }
+
+    previewList.style.display = 'grid';
+    previewList.innerHTML = '';
+    state.editingAssignmentImages.forEach((imgSrc, idx) => {
+      const item = document.createElement('div');
+      item.className = 'image-preview-item';
+      item.title = `Изображение ${idx + 1} (кликните для полноразмерного просмотра)`;
+      item.innerHTML = `
+        <img src="${escapeHtml(imgSrc)}" alt="Миниатюра ${idx + 1}">
+        <button type="button" class="btn-remove-thumb" title="Удалить это изображение" data-index="${idx}">✕</button>
+      `;
+      item.onclick = (e) => {
+        if (e.target.closest('.btn-remove-thumb')) return;
+        openLightbox(state.editingAssignmentImages, idx, 'Новое задание');
+      };
+      item.querySelector('.btn-remove-thumb').addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.editingAssignmentImages.splice(idx, 1);
+        updateImageEditorPreview();
+      });
+      previewList.appendChild(item);
+    });
   }
 
   function openEditAssignmentModal(assignId = null) {
@@ -1027,9 +1204,14 @@
     const deadlineInput = document.getElementById('assign-deadline-input');
     const videoInput = document.getElementById('assign-video-input');
     const fileInput = document.getElementById('assign-image-file');
+    const urlInput = document.getElementById('assign-image-url');
+    const multiGroupBox = document.getElementById('assign-multi-group-box');
+    const targetGroupsContainer = document.getElementById('assign-target-groups-list');
 
     if (fileInput) fileInput.value = '';
+    if (urlInput) urlInput.value = '';
 
+    let defaultIso = '';
     if (assignId) {
       const assign = group.assignments.find(a => a.id === assignId);
       if (!assign) return;
@@ -1038,27 +1220,58 @@
       if (titleInput) titleInput.value = assign.title;
       if (descInput) descInput.value = assign.description;
       if (videoInput) videoInput.value = assign.videoUrl || '';
-      state.editingAssignmentImage = assign.image || null;
+      state.editingAssignmentImages = extractImages(assign.images || assign.image);
       if (deadlineInput) {
         // Преобразуем формат в YYYY-MM-DDTHH:mm
         const d = new Date(assign.deadline);
-        const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-        deadlineInput.value = iso;
+        defaultIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        deadlineInput.value = defaultIso;
       }
+      // При редактировании скрываем блок мульти-создания (для этого есть отдельная кнопка "Скопировать")
+      if (multiGroupBox) multiGroupBox.style.display = 'none';
     } else {
       if (modalTitle) modalTitle.textContent = 'Добавить новое задание';
       if (typeSelect) typeSelect.value = 'homework';
       if (titleInput) titleInput.value = '';
       if (descInput) descInput.value = '';
       if (videoInput) videoInput.value = '';
-      state.editingAssignmentImage = null;
+      state.editingAssignmentImages = [];
       if (deadlineInput) {
         // Дедлайн по умолчанию через 7 дней
         const d = new Date();
         d.setDate(d.getDate() + 7);
         d.setHours(23, 59, 0, 0);
-        const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-        deadlineInput.value = iso;
+        defaultIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        deadlineInput.value = defaultIso;
+      }
+
+      // Заполняем список других групп для одновременного добавления
+      if (multiGroupBox && targetGroupsContainer) {
+        const otherGroups = (state.data.groups || []).filter(g => g.id !== group.id);
+        if (otherGroups.length > 0) {
+          multiGroupBox.style.display = 'block';
+          targetGroupsContainer.innerHTML = '';
+          otherGroups.forEach(g => {
+            const row = document.createElement('div');
+            row.className = 'assign-target-group-row';
+            row.innerHTML = `
+              <label class="assign-target-group-info">
+                <input type="checkbox" class="assign-target-group-checkbox" data-group-id="${g.id}">
+                <div>
+                  <div class="assign-target-group-name">${escapeHtml(g.name)}</div>
+                  <div class="assign-target-group-sub">${g.students.length} студентов</div>
+                </div>
+              </label>
+              <div class="assign-target-group-deadline-wrap">
+                <span style="font-size: 0.72rem; color: var(--text-muted);">Дедлайн:</span>
+                <input type="datetime-local" class="assign-target-group-deadline-input" data-deadline-group-id="${g.id}" value="${defaultIso}">
+              </div>
+            `;
+            targetGroupsContainer.appendChild(row);
+          });
+        } else {
+          multiGroupBox.style.display = 'none';
+        }
       }
     }
 
@@ -1076,7 +1289,7 @@
     const description = document.getElementById('assign-desc-input').value.trim();
     const deadlineVal = document.getElementById('assign-deadline-input').value;
     const videoUrl = document.getElementById('assign-video-input')?.value.trim() || null;
-    const image = state.editingAssignmentImage || null;
+    const images = state.editingAssignmentImages.length > 0 ? [...state.editingAssignmentImages] : null;
 
     if (!title) {
       showToast('Укажите название задания', 'error');
@@ -1094,7 +1307,9 @@
         assign.description = description;
         assign.deadline = deadline;
         assign.videoUrl = videoUrl;
-        assign.image = image;
+        assign.images = images;
+        // Для обратной совместимости также записываем первое изображение или null
+        assign.image = images ? images[0] : null;
         showToast('Задание успешно обновлено', 'success');
       }
     } else {
@@ -1107,7 +1322,8 @@
         description,
         deadline,
         videoUrl,
-        image,
+        images,
+        image: images ? images[0] : null,
       });
 
       // Инициализируем оценки студентов как null
@@ -1115,7 +1331,41 @@
         s.grades[newId] = null;
       });
 
-      showToast('Новое задание добавлено', 'success');
+      // Также создаем копии в других выбранных группах (если отмечены)
+      const targetCheckboxes = document.querySelectorAll('#assign-target-groups-list .assign-target-group-checkbox:checked');
+      let extraCreatedCount = 0;
+      targetCheckboxes.forEach(cb => {
+        const targetGid = cb.getAttribute('data-group-id');
+        const targetGroup = (state.data.groups || []).find(g => g.id === targetGid);
+        if (targetGroup) {
+          const dlInput = document.querySelector(`#assign-target-groups-list [data-deadline-group-id="${targetGid}"]`);
+          const customDlVal = dlInput ? dlInput.value : null;
+          const groupDeadline = customDlVal ? new Date(customDlVal).toISOString() : deadline;
+
+          const cloneId = (type === 'classwork' ? 'cw-' : 'hw-') + Date.now() + '-' + Math.floor(Math.random() * 1000);
+          targetGroup.assignments.push({
+            id: cloneId,
+            type,
+            title,
+            description,
+            deadline: groupDeadline,
+            videoUrl,
+            images,
+            image: images ? images[0] : null,
+          });
+
+          targetGroup.students.forEach(s => {
+            s.grades[cloneId] = null;
+          });
+          extraCreatedCount++;
+        }
+      });
+
+      if (extraCreatedCount > 0) {
+        showToast(`Задание создано в текущей группе и продублировано в ${extraCreatedCount} других групп!`, 'success');
+      } else {
+        showToast('Новое задание добавлено', 'success');
+      }
     }
 
     saveData();
@@ -1143,6 +1393,129 @@
     renderApp();
     showToast(`Задание "${assign.title}" удалено`, 'info');
   }
+
+  /* ==========================================================================
+     Копирование задания в другие группы (Дублирование)
+     ========================================================================== */
+
+  let copyingAssignmentContext = null;
+
+  function openCopyAssignmentModal(assignId) {
+    const currentGroup = getCurrentGroup();
+    if (!currentGroup) return;
+
+    const assign = currentGroup.assignments.find(a => a.id === assignId);
+    if (!assign) return;
+
+    copyingAssignmentContext = {
+      sourceGroupId: currentGroup.id,
+      assign: JSON.parse(JSON.stringify(assign))
+    };
+
+    const titleEl = document.getElementById('copy-assign-source-title');
+    const groupEl = document.getElementById('copy-assign-source-group');
+    const listContainer = document.getElementById('copy-assign-targets-list');
+
+    if (titleEl) titleEl.textContent = `${assign.type === 'classwork' ? '🏫' : '🏠'} ${assign.title}`;
+    if (groupEl) groupEl.textContent = `Исходная группа: ${currentGroup.name}`;
+
+    if (listContainer) {
+      listContainer.innerHTML = '';
+      const otherGroups = (state.data.groups || []).filter(g => g.id !== currentGroup.id);
+
+      if (otherGroups.length === 0) {
+        listContainer.innerHTML = '<div style="font-size:0.85rem; color:var(--text-muted); padding:0.5rem;">Нет других групп для копирования. Создайте группы в «Управлении группами».</div>';
+      } else {
+        const d = new Date(assign.deadline);
+        const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+        otherGroups.forEach(g => {
+          const row = document.createElement('div');
+          row.className = 'assign-target-group-row';
+          row.innerHTML = `
+            <label class="assign-target-group-info">
+              <input type="checkbox" class="assign-target-group-checkbox" data-copy-group-id="${g.id}">
+              <div>
+                <div class="assign-target-group-name">${escapeHtml(g.name)}</div>
+                <div class="assign-target-group-sub">${g.students.length} студентов</div>
+              </div>
+            </label>
+            <div class="assign-target-group-deadline-wrap">
+              <span style="font-size: 0.72rem; color: var(--text-muted);">Дедлайн:</span>
+              <input type="datetime-local" class="assign-target-group-deadline-input" data-copy-deadline-id="${g.id}" value="${iso}">
+            </div>
+          `;
+          listContainer.appendChild(row);
+        });
+      }
+    }
+
+    openModal('modal-copy-assignment');
+  }
+
+  document.getElementById('form-copy-assignment')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!copyingAssignmentContext) return;
+
+    const { assign } = copyingAssignmentContext;
+    const checked = Array.from(document.querySelectorAll('#copy-assign-targets-list [data-copy-group-id]:checked'));
+
+    if (checked.length === 0) {
+      showToast('Выберите хотя бы одну целевую группу', 'warning');
+      return;
+    }
+
+    let copiedCount = 0;
+    checked.forEach(cb => {
+      const gid = cb.getAttribute('data-copy-group-id');
+      const targetGroup = (state.data.groups || []).find(g => g.id === gid);
+      if (!targetGroup) return;
+
+      const dlInput = document.querySelector(`#copy-assign-targets-list [data-copy-deadline-id="${gid}"]`);
+      const customDlVal = dlInput ? dlInput.value : null;
+      const groupDeadline = customDlVal ? new Date(customDlVal).toISOString() : assign.deadline;
+
+      const cloneId = (assign.type === 'classwork' ? 'cw-' : 'hw-') + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      targetGroup.assignments.push({
+        id: cloneId,
+        type: assign.type,
+        title: assign.title,
+        description: assign.description,
+        deadline: groupDeadline,
+        videoUrl: assign.videoUrl,
+        images: assign.images || (assign.image ? [assign.image] : null),
+        image: assign.image || (assign.images && assign.images[0]) || null,
+      });
+
+      targetGroup.students.forEach(s => {
+        s.grades[cloneId] = null;
+      });
+      copiedCount++;
+    });
+
+    saveData();
+    closeModal('modal-copy-assignment');
+    renderApp();
+    showToast(`Задание успешно продублировано в ${copiedCount} групп!`, 'success');
+  });
+
+  document.getElementById('btn-assign-toggle-all-groups')?.addEventListener('click', () => {
+    const checkboxes = Array.from(document.querySelectorAll('#assign-target-groups-list .assign-target-group-checkbox'));
+    if (checkboxes.length === 0) return;
+    const allChecked = checkboxes.every(cb => cb.checked);
+    checkboxes.forEach(cb => { cb.checked = !allChecked; });
+    const btn = document.getElementById('btn-assign-toggle-all-groups');
+    if (btn) btn.textContent = allChecked ? 'Выбрать все' : 'Снять выбор';
+  });
+
+  document.getElementById('btn-copy-toggle-all-groups')?.addEventListener('click', () => {
+    const checkboxes = Array.from(document.querySelectorAll('#copy-assign-targets-list [data-copy-group-id]'));
+    if (checkboxes.length === 0) return;
+    const allChecked = checkboxes.every(cb => cb.checked);
+    checkboxes.forEach(cb => { cb.checked = !allChecked; });
+    const btn = document.getElementById('btn-copy-toggle-all-groups');
+    if (btn) btn.textContent = allChecked ? 'Выбрать все' : 'Снять выбор';
+  });
 
   /* ==========================================================================
      Управление студентами (Добавление / Редактирование / Удаление)
@@ -1416,128 +1789,6 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
      Импорт списка студентов из файлов-таблиц (HTML, CSV, TSV, TXT)
      ========================================================================== */
 
-  function parseStudentsFromHTML(htmlString) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlString, 'text/html');
-
-    // 1. Попытка определить название группы из заголовков (напр., "Список группы P3465 на 15.11.2026")
-    let detectedGroupName = '';
-    const fullText = doc.body.textContent || '';
-    const groupMatch = fullText.match(/Список группы\s+([A-Za-zА-Яа-я0-9\-_]+)/i) ||
-                       fullText.match(/Группа[:\s]+([A-Za-zА-Яа-я0-9\-_]+)/i);
-    if (groupMatch) {
-      detectedGroupName = groupMatch[1].trim();
-    }
-
-    const students = [];
-    const tables = doc.querySelectorAll('table');
-
-    for (const table of tables) {
-      const rows = Array.from(table.querySelectorAll('tr'));
-      if (rows.length === 0) continue;
-
-      let nameColIndex = -1;
-
-      // Проверяем первые 3 строки на наличие заголовка с Ф.И.О.
-      for (let r = 0; r < Math.min(rows.length, 3); r++) {
-        const cells = Array.from(rows[r].querySelectorAll('th, td'));
-        cells.forEach((cell, idx) => {
-          const txt = cell.textContent.trim().toLowerCase();
-          if (txt.includes('ф.и.о') || txt.includes('фио') || txt.includes('фамилия') || txt.includes('студент') || txt.includes('имя')) {
-            nameColIndex = idx;
-          }
-        });
-        if (nameColIndex !== -1) break;
-      }
-
-      // Если явного заголовка нет, ищем колонку с ФИО эвристически
-      if (nameColIndex === -1 && rows.length > 1) {
-        const colScores = {};
-        rows.slice(0, 15).forEach(row => {
-          const cells = Array.from(row.querySelectorAll('td'));
-          cells.forEach((cell, idx) => {
-            const txt = cell.textContent.trim();
-            // Паттерн ФИО (хотя бы 2 слова на русском с заглавной буквы)
-            if (/^[А-ЯЁ][а-яё\-]+(\s+[А-ЯЁ][а-яё\-]+)+/.test(txt)) {
-              colScores[idx] = (colScores[idx] || 0) + 1;
-            }
-          });
-        });
-        let maxScore = 0;
-        for (const idx in colScores) {
-          if (colScores[idx] > maxScore) {
-            maxScore = colScores[idx];
-            nameColIndex = Number(idx);
-          }
-        }
-      }
-
-      // Если определили колонку, извлекаем студентов
-      rows.forEach(row => {
-        const cells = Array.from(row.querySelectorAll('td'));
-        if (nameColIndex !== -1 && cells[nameColIndex]) {
-          let name = cells[nameColIndex].textContent.trim();
-          name = name.replace(/\s+/g, ' ');
-          if (name && !name.toLowerCase().includes('ф.и.о') && !name.toLowerCase().includes('фио') && name.length >= 3) {
-            if (/[А-Яа-яЁё]/.test(name)) {
-              // Сохраняем в формате Ф. И. О. (например, "И. И. И." или "А. М. О.")
-              const initials = formatToInitials(name);
-              if (!students.includes(initials)) {
-                students.push(initials);
-              }
-            }
-          }
-        }
-      });
-
-      if (students.length > 0) break;
-    }
-
-    return { groupName: detectedGroupName, students };
-  }
-
-  function parseStudentsFromText(text) {
-    let detectedGroupName = '';
-    const groupMatch = text.match(/Список группы\s+([A-Za-zА-Яа-я0-9\-_]+)/i) ||
-                       text.match(/Группа[:\s]+([A-Za-zА-Яа-я0-9\-_]+)/i);
-    if (groupMatch) {
-      detectedGroupName = groupMatch[1].trim();
-    }
-
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const students = [];
-
-    lines.forEach(line => {
-      if (line.toLowerCase().includes('ф.и.о') || line.toLowerCase().includes('фио')) return;
-
-      let candidate = '';
-      const parts = line.split(/[;\t,]/).map(p => p.trim());
-      if (parts.length > 1) {
-        const namePart = parts.find(p => /^[А-ЯЁа-яё\s\-]{4,}$/.test(p) && p.split(' ').length >= 2);
-        candidate = namePart || parts[parts.length - 1];
-      } else {
-        candidate = line.replace(/^\d+[\.\)\s\t]+/, '').replace(/^\d{5,}\s+/, '').trim();
-      }
-
-      if (candidate && /[А-Яа-яЁё]/.test(candidate) && candidate.length >= 3) {
-        candidate = candidate.replace(/\s+/g, ' ');
-        const initials = formatToInitials(candidate);
-        if (!students.includes(initials)) {
-          students.push(initials);
-        }
-      }
-    });
-
-    return { groupName: detectedGroupName, students };
-  }
-
-  function parseFileContent(content) {
-    if (content.includes('<table') || content.includes('<!DOCTYPE') || content.includes('<html')) {
-      return parseStudentsFromHTML(content);
-    }
-    return parseStudentsFromText(content);
-  }
-
   function openImportModal() {
     state.parsedImportData = null;
     const previewContainer = document.getElementById('import-preview-container');
@@ -1703,23 +1954,6 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
      Автоматический коммит на GitHub через GitHub REST API
      ========================================================================== */
 
-  function utf8ToBase64(str) {
-    return window.btoa(unescape(encodeURIComponent(str)));
-  }
-
-  function updateGitHubStatusCard() {
-    const card = document.getElementById('github-connection-status');
-    if (!card) return;
-    const { owner, repo, token } = state.githubSettings;
-    if (owner && repo && token) {
-      card.className = 'github-status-card connected';
-      card.innerHTML = `<span>🟢 Интеграция настроена: <b>${escapeHtml(owner)}/${escapeHtml(repo)}</b></span>`;
-    } else {
-      card.className = 'github-status-card disconnected';
-      card.innerHTML = `<span>⚪ Интеграция не настроена (введите токен и репозиторий)</span>`;
-    }
-  }
-
   function openGitHubSettingsModal() {
     const ownerInput = document.getElementById('github-owner-input');
     const repoInput = document.getElementById('github-repo-input');
@@ -1731,91 +1965,15 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
     if (branchInput) branchInput.value = state.githubSettings.branch || 'main';
     if (tokenInput) tokenInput.value = state.githubSettings.token || '';
 
-    updateGitHubStatusCard();
+    updateGitHubStatusCard(state.githubSettings);
     openModal('modal-github-settings');
   }
 
-  async function testGitHubConnection() {
+  async function handleTestGitHub() {
     const owner = document.getElementById('github-owner-input').value.trim();
     const repo = document.getElementById('github-repo-input').value.trim();
     const token = document.getElementById('github-token-input').value.trim();
-
-    if (!owner || !repo || !token) {
-      showToast('Заполните владельца, репозиторий и токен', 'error');
-      return;
-    }
-
-    try {
-      showToast('Проверка соединения с GitHub API...', 'info');
-      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      });
-
-      if (resp.ok) {
-        const repoData = await resp.json();
-        showToast(`Связь установлена! Репозиторий "${repoData.full_name}" доступен.`, 'success');
-        const card = document.getElementById('github-connection-status');
-        if (card) {
-          card.className = 'github-status-card connected';
-          card.innerHTML = `<span>🟢 Связь подтверждена: <b>${escapeHtml(repoData.full_name)}</b></span>`;
-        }
-      } else {
-        const err = await resp.json().catch(() => ({}));
-        showToast(`Ошибка GitHub: ${err.message || resp.statusText}`, 'error');
-      }
-    } catch (e) {
-      showToast(`Ошибка сети при связи с GitHub API: ${e.message}`, 'error');
-    }
-  }
-
-  async function commitFileToGitHub(path, contentStr, commitMessage) {
-    const { owner, repo, branch, token } = state.githubSettings;
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-
-    let sha = undefined;
-    try {
-      const getResp = await fetch(`${apiUrl}?ref=${branch}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      });
-      if (getResp.ok) {
-        const fileInfo = await getResp.json();
-        sha = fileInfo.sha;
-      }
-    } catch (e) {
-      console.log('Файл пока не существует, будет создан новый');
-    }
-
-    const body = {
-      message: commitMessage,
-      content: utf8ToBase64(contentStr),
-      branch: branch || 'main'
-    };
-    if (sha) {
-      body.sha = sha;
-    }
-
-    const putResp = await fetch(apiUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!putResp.ok) {
-      const errData = await putResp.json().catch(() => ({}));
-      throw new Error(errData.message || `Ошибка ${putResp.status}`);
-    }
-
-    return await putResp.json();
+    await testGitHubConnection({ owner, repo, token });
   }
 
   async function publishToGitHub() {
@@ -1841,8 +1999,25 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
       const timeStr = new Date().toLocaleString('ru-RU');
       const commitMsg = `Обновление успеваемости (из журнала) — ${timeStr}`;
 
-      await commitFileToGitHub('data.json', jsonContent, commitMsg);
-      await commitFileToGitHub('data.js', jsContent, commitMsg);
+      await commitFileToGitHub({
+        owner,
+        repo,
+        branch: branch || 'main',
+        token,
+        path: 'data.json',
+        contentStr: jsonContent,
+        commitMessage: commitMsg
+      });
+
+      await commitFileToGitHub({
+        owner,
+        repo,
+        branch: branch || 'main',
+        token,
+        path: 'data.js',
+        contentStr: jsContent,
+        commitMessage: commitMsg
+      });
 
       showToast('🚀 Успешно опубликовано на GitHub! GitHub Pages автоматически обновит сайт в течение 1-2 минут.', 'success');
     } catch (err) {
@@ -1861,6 +2036,14 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
      ========================================================================== */
 
   function attachTableAdminListeners() {
+    // Копирование задания в другие группы
+    document.querySelectorAll('[data-copy-assign]').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        openCopyAssignmentModal(btn.dataset.copyAssign);
+      };
+    });
+
     // Редактирование задания
     document.querySelectorAll('[data-edit-assign]').forEach(btn => {
       btn.onclick = (e) => {
@@ -2024,7 +2207,7 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
     // Публикация и настройки GitHub
     document.getElementById('btn-quick-github-sync')?.addEventListener('click', publishToGitHub);
     document.getElementById('btn-open-github-settings')?.addEventListener('click', openGitHubSettingsModal);
-    document.getElementById('btn-test-github-conn')?.addEventListener('click', testGitHubConnection);
+    document.getElementById('btn-test-github-conn')?.addEventListener('click', handleTestGitHub);
 
     document.getElementById('form-github-settings')?.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -2039,39 +2222,126 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
       showToast('Настройки GitHub успешно сохранены!', 'success');
     });
 
-    // Обработка прикрепления картинки к заданию
+    // Обработка прикрепления картинок к заданию
     const assignFileInput = document.getElementById('assign-image-file');
-    assignFileInput?.addEventListener('change', (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (file) {
-        if (!file.type.startsWith('image/')) {
-          showToast('Пожалуйста, выберите файл изображения (PNG, JPG, SVG, WebP)', 'error');
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = (re) => {
-          state.editingAssignmentImage = re.target.result;
-          updateImageEditorPreview();
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
     const assignUrlInput = document.getElementById('assign-image-url');
-    assignUrlInput?.addEventListener('input', (e) => {
-      const val = e.target.value.trim();
-      if (val) {
-        state.editingAssignmentImage = val;
+    const btnAddImageUrl = document.getElementById('btn-add-image-url');
+
+    function addImageFromUrl() {
+      if (!assignUrlInput) return;
+      const val = assignUrlInput.value.trim();
+      if (!val) return;
+      if (!state.editingAssignmentImages.includes(val)) {
+        state.editingAssignmentImages.push(val);
         updateImageEditorPreview();
       }
+      assignUrlInput.value = '';
+    }
+
+    btnAddImageUrl?.addEventListener('click', addImageFromUrl);
+    assignUrlInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addImageFromUrl();
+      }
     });
 
-    document.getElementById('btn-remove-assign-image')?.addEventListener('click', () => {
-      state.editingAssignmentImage = null;
-      if (assignFileInput) assignFileInput.value = '';
-      if (assignUrlInput) assignUrlInput.value = '';
-      updateImageEditorPreview();
+    assignFileInput?.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+
+      const validFiles = files.filter(f => f.type.startsWith('image/'));
+      if (validFiles.length < files.length) {
+        showToast('Некоторые выбранные файлы не являются изображениями', 'warning');
+      }
+
+      if (validFiles.length === 0) return;
+
+      // Сжимаем и масштабируем каждую картинку (Canvas) для экономии места
+      const compressPromises = validFiles.map(file => {
+        if (compressImageFile) {
+          return compressImageFile(file);
+        }
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (re) => resolve(re.target.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(compressPromises).then(results => {
+        results.filter(Boolean).forEach(res => {
+          state.editingAssignmentImages.push(res);
+        });
+        updateImageEditorPreview();
+        assignFileInput.value = '';
+      });
     });
+
+    // Слушатели карусели и закрытия просмотрщика картинок (Lightbox)
+    document.getElementById('lightbox-close-btn')?.addEventListener('click', closeLightbox);
+    document.getElementById('lightbox-prev-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      lightboxPrev();
+    });
+    document.getElementById('lightbox-next-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      lightboxNext();
+    });
+
+    document.getElementById('modal-image-lightbox')?.addEventListener('click', (e) => {
+      if (e.target.id === 'modal-image-lightbox' || e.target.classList.contains('lightbox-overlay')) {
+        closeLightbox();
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      const lightbox = document.getElementById('modal-image-lightbox');
+      const isLightboxActive = lightbox && lightbox.style.display === 'flex';
+
+      if (e.key === 'Escape') {
+        if (isLightboxActive) {
+          closeLightbox();
+        } else {
+          const activeModals = document.querySelectorAll('.modal-overlay.active');
+          if (activeModals.length > 0) {
+            activeModals[activeModals.length - 1].classList.remove('active');
+            updateModalBodyLock();
+          }
+        }
+      } else if (isLightboxActive && e.key === 'ArrowRight') {
+        lightboxNext();
+      } else if (isLightboxActive && e.key === 'ArrowLeft') {
+        lightboxPrev();
+      }
+    });
+
+    // Свайп-жесты для мобильных устройств (карусель в полноэкранном режиме)
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const lightboxEl = document.getElementById('modal-image-lightbox');
+    lightboxEl?.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    lightboxEl?.addEventListener('touchend', (e) => {
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        const diffX = e.changedTouches[0].clientX - touchStartX;
+        const diffY = e.changedTouches[0].clientY - touchStartY;
+        // Порог свайпа по горизонтали (более 40px и преимущественно по горизонтали)
+        if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+          if (diffX < 0) {
+            lightboxNext();
+          } else {
+            lightboxPrev();
+          }
+        }
+      }
+    }, { passive: true });
 
     // Копирование JSON в буфер обмена
     document.getElementById('btn-copy-json')?.addEventListener('click', () => {
@@ -2087,6 +2357,9 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
     document.getElementById('btn-reset-data')?.addEventListener('click', () => {
       if (confirm('Сбросить все внесённые изменения к исходным демонстрационным данным?')) {
         localStorage.removeItem(STORAGE_KEY);
+        if (idbDelete) {
+          idbDelete(STORAGE_KEY);
+        }
         if (window.DEFAULT_REGISTER_DATA) {
           state.data = JSON.parse(JSON.stringify(window.DEFAULT_REGISTER_DATA));
         }

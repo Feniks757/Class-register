@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2.2">
 </head>
 <body>
 
@@ -258,22 +258,18 @@
           <div id="modal-assign-detail-desc" class="assignment-detail-description"></div>
         </div>
 
-        <!-- Прикреплённое изображение (если есть) -->
+        <!-- Прикреплённые изображения (если есть) -->
         <div id="modal-assign-detail-image-box" class="form-group" style="display: none;">
-          <span class="form-label">Прикреплённое изображение к заданию:</span>
-          <div class="assignment-modal-image-wrap">
-            <img id="modal-assign-detail-image" class="assignment-modal-image" src="" alt="Иллюстрация к заданию" title="Нажмите, чтобы открыть в новой вкладке">
+          <span class="form-label" id="modal-assign-detail-image-label">Иллюстрации к заданию:</span>
+          <div id="modal-assign-detail-images-gallery" class="assignment-modal-gallery">
+            <!-- Картинки генерируются JS -->
           </div>
         </div>
 
-        <!-- Ссылка на видео (если есть) -->
+        <!-- Ссылки и материалы к заданию (если есть) -->
         <div id="modal-assign-detail-video-box" class="form-group" style="display: none;">
-          <span class="form-label">Видеоматериал к заданию:</span>
-          <div>
-            <a id="modal-assign-detail-video-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="background:#e11d48; border-color:#e11d48; display:inline-flex; align-items:center; gap:0.4rem;">
-              <span>🎬</span> Смотреть видео к заданию
-            </a>
-          </div>
+          <span class="form-label" id="modal-assign-detail-links-label">Полезные ссылки и материалы:</span>
+          <div id="modal-assign-detail-links-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
         </div>
 
         <!-- Краткая сводка сдачи задания в группе -->
@@ -289,6 +285,9 @@
         </div>
       </div>
       <div class="modal-footer">
+        <button id="modal-assign-btn-copy" class="btn btn-secondary btn-sm" type="button" style="display: none;">
+          <span>📑</span> Скопировать в другие группы
+        </button>
         <button id="modal-assign-btn-edit" class="btn btn-secondary btn-sm" type="button" style="display: none;">
           <span>✎</span> Редактировать задание
         </button>
@@ -360,25 +359,45 @@
             <textarea id="assign-desc-input" class="form-textarea" rows="4" placeholder="Опишите требования, критерии оценивания или прикрепите ссылки..."></textarea>
           </div>
 
-          <!-- Поле: Ссылка на видео -->
+          <!-- Поле: Ссылки к заданию (видео, статьи, репозитории и т.д.) -->
           <div class="form-group">
-            <label class="form-label" for="assign-video-input">Ссылка на видео:</label>
-            <input type="url" id="assign-video-input" class="form-input" placeholder="https://youtube.com/watch?v=... или Rutube / VK Видео">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+              <label class="form-label" for="assign-video-input">Ссылки на материалы (видео, статьи, репозитории):</label>
+              <span class="form-hint" style="margin: 0;">по одной ссылке на строку</span>
+            </div>
+            <textarea id="assign-video-input" class="form-textarea" rows="3" placeholder="Вставьте ссылки (каждую с новой строки):&#10;https://youtube.com/watch?v=...&#10;https://habr.com/...&#10;https://github.com/..."></textarea>
           </div>
 
-          <!-- Прикрепление картинки -->
+          <!-- Прикрепление картинок (можно несколько) -->
           <div class="form-group">
-            <label class="form-label">Прикрепить картинку (схему / скриншот):</label>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+              <label class="form-label">Прикрепить картинки (схемы / скриншоты):</label>
+              <span class="form-hint" style="margin: 0;">можно выбрать несколько файлов</span>
+            </div>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <input type="file" id="assign-image-file" class="form-input" accept="image/*" style="flex: 1; padding: 0.4rem;">
+              <input type="file" id="assign-image-file" class="form-input" accept="image/*" multiple style="flex: 1; padding: 0.4rem;">
             </div>
-            <div style="margin-top: 0.35rem;">
-              <input type="url" id="assign-image-url" class="form-input" placeholder="Или укажите прямую ссылку на картинку (https://...)">
+            <div style="margin-top: 0.35rem; display: flex; gap: 0.4rem;">
+              <input type="url" id="assign-image-url" class="form-input" placeholder="Или укажите прямую ссылку на картинку (https://...)" style="flex: 1;">
+              <button id="btn-add-image-url" type="button" class="btn btn-secondary btn-sm" style="white-space: nowrap;">➕ Добавить URL</button>
             </div>
-            <!-- Превью выбранного изображения -->
-            <div id="assign-image-preview-wrap" class="image-preview-box" style="display: none;">
-              <img id="assign-image-preview" class="image-preview-img" src="" alt="Предпросмотр">
-              <button id="btn-remove-assign-image" type="button" class="btn-remove-image">✕ Удалить</button>
+            <!-- Список прикрепленных картинок с превью -->
+            <div id="assign-images-preview-list" class="image-previews-grid" style="display: none;">
+              <!-- Миниатюры генерируются JS -->
+            </div>
+          </div>
+
+          <!-- Применить задание также к другим группам -->
+          <div class="form-group" id="assign-multi-group-box" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <label class="form-label" style="margin: 0; font-weight: 600;">📑 Также продублировать в группы:</label>
+              <button type="button" id="btn-assign-toggle-all-groups" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Выбрать все</button>
+            </div>
+            <div class="form-hint" style="margin-bottom: 0.5rem;">
+              Позволяет автоматически создать это же задание в выбранных группах. Вы можете сразу скорректировать индивидуальный дедлайн для каждой группы!
+            </div>
+            <div id="assign-target-groups-list" class="assign-target-groups-list">
+              <!-- Список чекбоксов групп генерируется JS -->
             </div>
           </div>
         </div>
@@ -659,11 +678,74 @@
     </div>
   </div>
 
+  <!-- 10. Модальное окно копирования (дублирования) задания в другие группы -->
+  <div id="modal-copy-assignment" class="modal-overlay">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📑 Скопировать задание в другие группы</h3>
+        <button class="modal-close-btn" type="button">&times;</button>
+      </div>
+      <form id="form-copy-assignment">
+        <div class="modal-body">
+          <div style="background: var(--bg-hover); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 0.85rem;">
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Копируемое задание:</div>
+            <div id="copy-assign-source-title" style="font-weight: 700; font-size: 1rem; color: var(--text-main); margin-top: 2px;"></div>
+            <div id="copy-assign-source-group" style="font-size: 0.8rem; color: var(--primary); margin-top: 2px;"></div>
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <label class="form-label" style="margin: 0; font-weight: 600;">Выберите целевые группы:</label>
+              <button type="button" id="btn-copy-toggle-all-groups" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Выбрать все</button>
+            </div>
+            <div class="form-hint" style="margin-bottom: 0.5rem;">
+              Отметьте группы, в которые нужно продублировать это задание. Задание скопируется со всем описанием, ссылками и картинками. Вы также можете задать отдельный дедлайн для каждой группы:
+            </div>
+            <div id="copy-assign-targets-list" class="assign-target-groups-list">
+              <!-- Список генерируется JS -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm modal-close-btn">Отмена</button>
+          <button type="submit" class="btn btn-primary btn-sm">Скопировать в выбранные группы</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 11. Модальное окно просмотра полноразмерного изображения (Lightbox / Карусель) -->
+  <div id="modal-image-lightbox" class="lightbox-overlay" style="display: none;">
+    <button type="button" class="lightbox-close-btn" id="lightbox-close-btn" title="Закрыть (Esc)">&times;</button>
+    <button type="button" class="lightbox-nav-btn lightbox-prev-btn" id="lightbox-prev-btn" title="Предыдущее фото (←)">&#10094;</button>
+    <button type="button" class="lightbox-nav-btn lightbox-next-btn" id="lightbox-next-btn" title="Следующее фото (→)">&#10095;</button>
+    <div class="lightbox-content">
+      <div class="lightbox-image-container">
+        <img id="lightbox-img" src="" alt="Иллюстрация к заданию">
+      </div>
+      <div class="lightbox-footer">
+        <div class="lightbox-meta">
+          <span id="lightbox-counter" class="lightbox-counter-badge" style="display: none;"></span>
+          <span id="lightbox-caption" class="lightbox-caption"></span>
+        </div>
+        <div class="lightbox-actions">
+          <a id="lightbox-open-external" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">
+            ↗ Открыть оригинал
+          </a>
+        </div>
+      </div>
+      <div id="lightbox-thumbs-bar" class="lightbox-thumbs-bar" style="display: none;"></div>
+    </div>
+  </div>
+
   <!-- Контейнер всплывающих уведомлений -->
   <div id="toast-container" class="toast-container"></div>
 
-  <!-- Скрипты: сначала дефолтные данные (для оффлайн/file:/// совместимости), затем логика -->
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <!-- Скрипты: данные -> утилиты -> парсер -> github -> app -->
+  <script src="data.js?v=2.2"></script>
+  <script src="js/utils.js?v=2.2"></script>
+  <script src="js/parser.js?v=2.2"></script>
+  <script src="js/github-sync.js?v=2.2"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>

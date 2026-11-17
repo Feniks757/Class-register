@@ -64,6 +64,11 @@ body {
   flex-direction: column;
 }
 
+body.modal-open {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
 /* ==========================================================================
    Header & Navbar
    ========================================================================== */
@@ -935,8 +940,7 @@ body {
   pointer-events: none;
   transition: opacity 0.2s ease;
   padding: 1rem;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -951,7 +955,8 @@ body {
   box-shadow: var(--shadow-xl);
   max-width: 520px;
   width: 100%;
-  max-height: calc(100dvh - 2rem);
+  max-height: calc(100vh - 2.5rem);
+  max-height: calc(100dvh - 2.5rem);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -960,6 +965,20 @@ body {
   box-sizing: border-box;
   transform: translateY(15px);
   transition: transform 0.2s ease;
+}
+
+#modal-assignment-detail .modal-card {
+  max-width: 720px;
+  width: 100%;
+  height: min(85vh, 740px);
+  max-height: calc(100vh - 2.5rem);
+  max-height: calc(100dvh - 2.5rem);
+  min-height: 440px;
+}
+
+#modal-assignment-detail .modal-body {
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable;
 }
 
 .modal-card > form {
@@ -1014,14 +1033,49 @@ body {
 }
 
 .modal-body {
-  padding: 1.25rem;
+  padding: 1.25rem 1.25rem 2.25rem 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  overflow-y: auto;
-  flex: 1;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  flex: 1 1 auto;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #64748b #f1f5f9;
+}
+
+.modal-body > * {
+  flex-shrink: 0;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 10px;
+  display: block;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 8px;
+  border-left: 1px solid #e2e8f0;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 8px;
+  border: 2px solid #f1f5f9;
+  min-height: 45px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+.modal-body::-webkit-scrollbar-thumb:active {
+  background: var(--primary);
 }
 
 .modal-footer {
@@ -1098,6 +1152,8 @@ body {
   line-height: 1.6;
   white-space: pre-wrap;
   color: #334155;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .assignment-stats-box {
@@ -1105,6 +1161,7 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   margin-top: 0.5rem;
+  flex-shrink: 0;
 }
 
 .assignment-stat-card {
@@ -1315,58 +1372,490 @@ body {
   background: #64748b;
 }
 
-.assignment-modal-image-wrap {
-  margin-top: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: #f1f5f9;
-  text-align: center;
-}
-
-.assignment-modal-image {
+/* Галерея и карусель изображений в модальном окне описания */
+#modal-assign-detail-image-box {
+  width: 100%;
   max-width: 100%;
-  max-height: 420px;
-  object-fit: contain;
-  display: block;
-  margin: 0 auto;
-  cursor: zoom-in;
-  transition: transform 0.2s ease;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
-.image-preview-box {
-  position: relative;
+.assignment-modal-gallery {
   margin-top: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* Одиночное изображение в модалке */
+.assignment-modal-gallery-item {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   overflow: hidden;
-  max-height: 180px;
   background: #f8fafc;
+  text-align: center;
+  position: relative;
+  cursor: zoom-in;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+
+.assignment-modal-gallery-item:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.assignment-modal-gallery-item img {
+  display: block;
+  max-width: 100%;
+  max-height: 380px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto;
+  background: #ffffff;
+}
+
+.assignment-modal-gallery-item .gallery-item-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
   display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Встроенная карусель в карточке задания при нескольких фото */
+.card-carousel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.card-carousel-main {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #f8fafc;
+  cursor: zoom-in;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  max-height: 380px;
+  flex-shrink: 0;
+}
+
+.card-carousel-main img {
+  display: block;
+  max-width: 100%;
+  max-height: 380px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  background: #ffffff;
+  margin: 0 auto;
+  transition: opacity 0.15s ease;
+}
+
+.card-carousel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 5;
+  user-select: none;
+}
+
+.card-carousel-nav-btn:hover {
+  background: rgba(15, 23, 42, 0.9);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.card-carousel-prev {
+  left: 8px;
+}
+
+.card-carousel-next {
+  right: 8px;
+}
+
+.card-carousel-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.card-carousel-fullscreen-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-carousel-thumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 4px 1px;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.card-carousel-thumb-item {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border-color);
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0.65;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  background: #f1f5f9;
+}
+
+.card-carousel-thumb-item:hover {
+  opacity: 0.95;
+  border-color: var(--primary);
+}
+
+.card-carousel-thumb-item.active {
+  border-color: var(--primary);
+  opacity: 1;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.card-carousel-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Сетка миниатюр при создании / редактировании задания */
+.image-previews-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 0.45rem;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+.image-preview-item {
+  position: relative;
+  height: 95px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.image-preview-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--primary);
+}
+
+.image-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.image-preview-item .btn-remove-thumb {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(239, 68, 68, 0.92);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  transition: background 0.15s ease, transform 0.15s ease;
+  z-index: 2;
+}
+
+.image-preview-item .btn-remove-thumb:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+/* Полноэкранный просмотр изображений (Lightbox / Карусель) */
+.lightbox-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(6px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  box-sizing: border-box;
+  animation: fadeIn 0.15s ease;
+  user-select: none;
+}
+
+.lightbox-content {
+  position: relative;
+  max-width: 95vw;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
-.image-preview-img {
+.lightbox-image-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
   max-width: 100%;
-  max-height: 180px;
-  object-fit: contain;
 }
 
-.btn-remove-image {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: rgba(239, 68, 68, 0.9);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 3px 8px;
-  font-size: 0.75rem;
-  cursor: pointer;
+.lightbox-content img {
+  max-width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+  background: #0f172a;
+  transition: opacity 0.15s ease;
 }
-.btn-remove-image:hover {
-  background: #dc2626;
+
+.lightbox-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  font-size: 1.8rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 100000;
+}
+
+.lightbox-close-btn:hover {
+  background: rgba(239, 68, 68, 0.9);
+  border-color: rgba(239, 68, 68, 1);
+  transform: scale(1.06);
+}
+
+/* Кнопки перелистывания карусели */
+.lightbox-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  font-size: 1.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 100000;
+  backdrop-filter: blur(4px);
+}
+
+.lightbox-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.lightbox-prev-btn {
+  left: 1.25rem;
+}
+
+.lightbox-next-btn {
+  right: 1.25rem;
+}
+
+.lightbox-footer {
+  margin-top: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+  gap: 1rem;
+}
+
+.lightbox-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lightbox-counter-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.lightbox-caption {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Лента миниатюр карусели внизу экрана */
+.lightbox-thumbs-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  max-width: 90vw;
+  overflow-x: auto;
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.lightbox-thumb-item {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  background: #000;
+}
+
+.lightbox-thumb-item:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.lightbox-thumb-item.active {
+  border-color: var(--primary);
+  opacity: 1;
+  transform: scale(1.08);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
+}
+
+.lightbox-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .lightbox-nav-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1.3rem;
+  }
+  .lightbox-prev-btn {
+    left: 0.4rem;
+  }
+  .lightbox-next-btn {
+    right: 0.4rem;
+  }
+  .lightbox-thumb-item {
+    width: 42px;
+    height: 42px;
+  }
 }
 
 /* ==========================================================================
@@ -1797,13 +2286,22 @@ body {
     padding: 0.5rem;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
   }
 
   .modal-card {
     max-width: 100% !important;
     width: 100% !important;
+    height: calc(100vh - 1rem);
+    height: calc(100dvh - 1rem);
+    max-height: calc(100vh - 1rem);
     max-height: calc(100dvh - 1rem);
     border-radius: var(--radius-md);
+  }
+
+  #modal-assignment-detail .modal-card {
+    height: calc(100vh - 1rem);
+    height: calc(100dvh - 1rem);
   }
 
   .modal-header {
@@ -1817,8 +2315,22 @@ body {
   }
 
   .modal-body {
-    padding: 0.85rem;
+    padding: 0.85rem 0.85rem 1.75rem 0.85rem;
     gap: 0.75rem;
+    overflow-y: scroll !important;
+  }
+
+  .assignment-modal-gallery-item img {
+    max-height: 240px;
+  }
+
+  .card-carousel-main {
+    min-height: 170px;
+    max-height: 240px;
+  }
+
+  .card-carousel-main img {
+    max-height: 240px;
   }
 
   .modal-footer {
@@ -1896,3 +2408,84 @@ body {
     padding: 0.35rem 0.65rem;
   }
 }
+
+/* ==========================================================================
+   Копирование / дублирование заданий между группами
+   ========================================================================== */
+.assign-target-groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.5rem;
+  background: var(--bg-surface);
+}
+
+.assign-target-group-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+}
+
+.assign-target-group-row:hover {
+  background: #f1f5f9;
+}
+
+.assign-target-group-row.disabled {
+  opacity: 0.6;
+}
+
+.assign-target-group-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.assign-target-group-checkbox {
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.assign-target-group-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assign-target-group-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.assign-target-group-deadline-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.assign-target-group-deadline-input {
+  padding: 0.25rem 0.45rem;
+  font-size: 0.78rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: white;
+  color: var(--text-main);
+}
+
