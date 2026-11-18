@@ -1,6 +1,6 @@
 /**
  * Автоматически сгенерированные данные электронного журнала
- * Экспортировано: 2026-11-18T13:14:58.834Z
+ * Экспортировано: 2026-11-18T13:19:23.194Z
  */
 window.DEFAULT_REGISTER_DATA = {
   "settings": {
@@ -227,6 +227,60 @@ window.DEFAULT_REGISTER_DATA = {
           "deadline": "2026-10-23T20:59:00.000Z",
           "videoUrl": null,
           "images": null
+        },
+        {
+          "id": "hw-1795007794647",
+          "type": "homework",
+          "title": "Копия импрессионистов",
+          "description": "Принести копию",
+          "deadline": "2026-11-20T20:59:00.000Z",
+          "videoUrl": null,
+          "images": null
+        },
+        {
+          "id": "cw-1795007847261",
+          "type": "classwork",
+          "title": "Тепло-холодность 1 занятие",
+          "description": "",
+          "deadline": "2026-09-25T20:59:00.000Z",
+          "videoUrl": null,
+          "images": null
+        },
+        {
+          "id": "cw-1795007873709",
+          "type": "classwork",
+          "title": "Тепло-холодность 2 занятие",
+          "description": "",
+          "deadline": "2026-10-09T20:59:00.000Z",
+          "videoUrl": null,
+          "images": null
+        },
+        {
+          "id": "hw-1795007904165",
+          "type": "classwork",
+          "title": "МК Арбуз",
+          "description": "",
+          "deadline": "2026-10-23T20:59:00.000Z",
+          "videoUrl": null,
+          "images": null
+        },
+        {
+          "id": "cw-1795007931854",
+          "type": "classwork",
+          "title": "Экзаменационная работа",
+          "description": "",
+          "deadline": "2026-11-20T20:59:00.000Z",
+          "videoUrl": null,
+          "images": null
+        },
+        {
+          "id": "cw-1795007956805",
+          "type": "classwork",
+          "title": "Авангардизм",
+          "description": "",
+          "deadline": "2026-12-04T20:59:00.000Z",
+          "videoUrl": null,
+          "images": null
         }
       ],
       "students": [
@@ -240,7 +294,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -253,7 +313,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -266,7 +332,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -279,7 +351,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -292,7 +370,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -305,7 +389,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": null,
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -318,7 +408,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -331,7 +427,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": null,
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -344,7 +446,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -357,7 +465,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -370,7 +484,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -383,7 +503,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -396,7 +522,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         },
         {
@@ -409,7 +541,13 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850896668": null,
             "hw-1795007340333": "submitted",
             "hw-1795007405538": null,
-            "hw-1795007452075": null
+            "hw-1795007452075": null,
+            "hw-1795007794647": null,
+            "cw-1795007847261": null,
+            "cw-1795007873709": null,
+            "hw-1795007904165": null,
+            "cw-1795007931854": null,
+            "cw-1795007956805": null
           }
         }
       ]
@@ -856,5 +994,5 @@ window.DEFAULT_REGISTER_DATA = {
       ]
     }
   ],
-  "lastModified": 1795007698820
+  "lastModified": 1795007963179
 };
