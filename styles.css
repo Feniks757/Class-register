@@ -1297,6 +1297,47 @@ tr.row-drag-over td {
   gap: 1rem;
 }
 
+.footer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.footer-last-modified {
+  font-size: 0.82rem;
+  color: var(--text-light);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.footer-last-modified b {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.footer-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.footer-sync-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.footer-sync-btn.loading .sync-icon {
+  animation: spinSync 0.8s linear infinite;
+}
+
+@keyframes spinSync {
+  100% { transform: rotate(360deg); }
+}
+
 /* ==========================================================================
    Image attachments & Preview
    ========================================================================== */

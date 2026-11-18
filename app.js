@@ -259,6 +259,38 @@
     renderGroupPills();
     renderStatistics();
     renderTable();
+    renderFooterInfo();
+  }
+
+  function renderFooterInfo() {
+    const timeEl = document.getElementById('footer-last-modified-time');
+    if (!timeEl) return;
+
+    const ts = state.data?.lastModified;
+    if (!ts) {
+      timeEl.textContent = 'неизвестно';
+      return;
+    }
+
+    try {
+      const date = new Date(ts);
+      if (isNaN(date.getTime())) {
+        timeEl.textContent = '—';
+        return;
+      }
+      const dateStr = date.toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+      const timeStr = date.toLocaleTimeString('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      timeEl.textContent = `${dateStr} в ${timeStr}`;
+    } catch (e) {
+      timeEl.textContent = '—';
+    }
   }
 
   function renderGateState() {
@@ -2335,13 +2367,19 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
 
   // Привязка основных элементов интерфейса
   function setupEventListeners() {
-    // Синхронизация данных с сервера (кнопка в шапке)
-    document.getElementById('btn-header-sync')?.addEventListener('click', async () => {
-      const btn = document.getElementById('btn-header-sync');
-      if (btn) btn.disabled = true;
+    // Синхронизация данных с сервера (кнопка в футере)
+    document.getElementById('btn-footer-sync')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-footer-sync');
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('loading');
+      }
       showToast('Проверяем обновления на сервере...', 'info');
       const updated = await syncDataFromServer(true);
-      if (btn) btn.disabled = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
       if (updated) {
         showToast('Данные успешно обновлены с сервера!', 'success');
       } else {

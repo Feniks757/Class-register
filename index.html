@@ -51,11 +51,6 @@
       </div>
 
       <div class="header-actions">
-        <!-- Кнопка быстрой синхронизации/обновления данных с сервера -->
-        <button id="btn-header-sync" class="btn btn-secondary btn-sm header-sync-btn" type="button" title="Проверить и загрузить свежие изменения с GitHub">
-          <span>🔄</span> <span class="header-sync-text">Обновить</span>
-        </button>
-
         <!-- Индикатор группы для студента + кнопка смены группы -->
         <div id="student-unlocked-badge-wrap" style="display: none; align-items: center; gap: 0.5rem;">
           <span class="student-group-badge">
@@ -232,7 +227,17 @@
   <!-- Подвал сайта -->
   <footer class="site-footer">
     <div class="footer-content">
-      <div>Электронный журнал успеваемости студентов &copy; 2026.</div>
+      <div class="footer-info">
+        <div>Электронный журнал успеваемости студентов &copy; 2026.</div>
+        <div id="footer-last-modified" class="footer-last-modified">
+          <span>🕒 Последнее обновление:</span> <b id="footer-last-modified-time">—</b>
+        </div>
+      </div>
+      <div class="footer-actions">
+        <button id="btn-footer-sync" class="btn btn-secondary btn-sm footer-sync-btn" type="button" title="Проверить и загрузить свежие изменения с GitHub">
+          <span class="sync-icon">🔄</span> <span>Обновить данные</span>
+        </button>
+      </div>
     </div>
   </footer>
 
