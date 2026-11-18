@@ -96,21 +96,36 @@ window.AppGitHub = (function () {
       // 2. Создаем Blobs для каждого файла
       const treeItems = [];
       for (const file of files) {
-        const blobResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
+        let blobData = null;
+        // Для текстовых файлов (JSON, JS) используем utf-8 напрямую без overhead
+        let blobResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
           method: 'POST',
           headers: authHeaders,
           body: JSON.stringify({
-            content: utf8ToBase64(file.contentStr),
-            encoding: 'base64'
+            content: file.contentStr,
+            encoding: 'utf-8'
           })
         });
 
-        if (!blobResp.ok) {
-          const err = await blobResp.json().catch(() => ({}));
-          throw new Error(err.message || `Ошибка создания blob для ${file.path}: HTTP ${blobResp.status}`);
+        if (blobResp.ok) {
+          blobData = await blobResp.json();
+        } else {
+          // Запасной вариант через base64, если сервер запросил его
+          const base64Resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({
+              content: utf8ToBase64(file.contentStr),
+              encoding: 'base64'
+            })
+          });
+          if (!base64Resp.ok) {
+            const err = await base64Resp.json().catch(() => ({}));
+            throw new Error(err.message || `Ошибка создания blob для ${file.path}: HTTP ${base64Resp.status}`);
+          }
+          blobData = await base64Resp.json();
         }
 
-        const blobData = await blobResp.json();
         treeItems.push({
           path: file.path,
           mode: '100644',

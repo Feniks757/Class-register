@@ -46,6 +46,7 @@
     extractImages,
     utf8ToBase64,
     compressImageFile,
+    optimizeRegisterDataImages,
     idbGet,
     idbSet,
     idbDelete
@@ -142,6 +143,16 @@
           });
         }
       });
+
+      // Фоновая оптимизация и сжатие тяжелых картинок в базе данных
+      if (typeof optimizeRegisterDataImages === 'function') {
+        optimizeRegisterDataImages(state.data).then(modified => {
+          if (modified) {
+            saveData();
+            console.log('База данных успешно оптимизирована и сжата');
+          }
+        });
+      }
     }
 
     // Восстанавливаем разблокированную студентом группу из sessionStorage
@@ -1308,8 +1319,7 @@
         assign.deadline = deadline;
         assign.videoUrl = videoUrl;
         assign.images = images;
-        // Для обратной совместимости также записываем первое изображение или null
-        assign.image = images ? images[0] : null;
+        delete assign.image;
         showToast('Задание успешно обновлено', 'success');
       }
     } else {
@@ -1322,8 +1332,7 @@
         description,
         deadline,
         videoUrl,
-        images,
-        image: images ? images[0] : null,
+        images
       });
 
       // Инициализируем оценки студентов как null
@@ -1350,8 +1359,7 @@
             description,
             deadline: groupDeadline,
             videoUrl,
-            images,
-            image: images ? images[0] : null,
+            images
           });
 
           targetGroup.students.forEach(s => {
@@ -1483,8 +1491,7 @@
         description: assign.description,
         deadline: groupDeadline,
         videoUrl: assign.videoUrl,
-        images: assign.images || (assign.image ? [assign.image] : null),
-        image: assign.image || (assign.images && assign.images[0]) || null,
+        images: assign.images || (assign.image ? [assign.image] : null)
       });
 
       targetGroup.students.forEach(s => {
@@ -1991,6 +1998,14 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
     }
 
     try {
+      if (typeof optimizeRegisterDataImages === 'function') {
+        showToast('Оптимизация базы данных...', 'info');
+        const wasOptimized = await optimizeRegisterDataImages(state.data);
+        if (wasOptimized) {
+          saveData();
+        }
+      }
+
       showToast('Создание коммита на GitHub...', 'info');
 
       const jsonContent = JSON.stringify(state.data, null, 2);

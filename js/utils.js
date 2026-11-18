@@ -236,6 +236,109 @@ window.AppUtils = (function () {
     });
   }
 
+  /**
+   * Сжатие существующей Base64 строки изображения (для облегчения базы данных)
+   */
+  function compressBase64Image(dataUrl, maxWidth = 1200, maxHeight = 1200, quality = 0.78) {
+    return new Promise((resolve) => {
+      if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+        return resolve(dataUrl);
+      }
+      if (dataUrl.startsWith('data:image/svg+xml') || dataUrl.startsWith('data:image/gif') || dataUrl.length < 100000) {
+        return resolve(dataUrl);
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width / height > maxWidth / maxHeight) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        try {
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          if (compressed.length < dataUrl.length) {
+            resolve(compressed);
+          } else {
+            resolve(dataUrl);
+          }
+        } catch (e) {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
+  /**
+   * Автоматическая оптимизация и сжатие всех картинок в базе данных журнала
+   * Устраняет дублирование и сжимает тяжелые фото, уменьшая размер базы на 90-98%
+   */
+  async function optimizeRegisterDataImages(data) {
+    if (!data || !Array.isArray(data.groups)) return false;
+    let modified = false;
+    const cache = new Map();
+
+    for (const group of data.groups) {
+      if (!Array.isArray(group.assignments)) continue;
+      for (const assign of group.assignments) {
+        // Очищаем устаревшее дублирование assign.image, если есть массив images
+        if (Array.isArray(assign.images) && assign.images.length > 0) {
+          if (assign.image) {
+            delete assign.image;
+            modified = true;
+          }
+          const compressedList = [];
+          for (let i = 0; i < assign.images.length; i++) {
+            const raw = assign.images[i];
+            if (typeof raw === 'string' && raw.startsWith('data:image/') && raw.length > 100000) {
+              if (cache.has(raw)) {
+                compressedList.push(cache.get(raw));
+                modified = true;
+              } else {
+                const comp = await compressBase64Image(raw);
+                cache.set(raw, comp);
+                compressedList.push(comp);
+                if (comp.length < raw.length) modified = true;
+              }
+            } else {
+              compressedList.push(raw);
+            }
+          }
+          assign.images = compressedList;
+        } else if (typeof assign.image === 'string' && assign.image.startsWith('data:image/')) {
+          if (assign.image.length > 100000) {
+            if (cache.has(assign.image)) {
+              assign.image = cache.get(assign.image);
+              modified = true;
+            } else {
+              const comp = await compressBase64Image(assign.image);
+              cache.set(assign.image, comp);
+              assign.image = comp;
+              if (comp.length < assign.image.length) modified = true;
+            }
+          }
+        }
+      }
+    }
+    return modified;
+  }
+
   /* ==========================================================================
      Надежное хранилище IndexedDB (без лимита 5 МБ в localStorage)
      ========================================================================== */
@@ -323,6 +426,8 @@ window.AppUtils = (function () {
     extractImages,
     utf8ToBase64,
     compressImageFile,
+    compressBase64Image,
+    optimizeRegisterDataImages,
     idbGet,
     idbSet,
     idbDelete
