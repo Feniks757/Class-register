@@ -52,7 +52,7 @@
   } = window.AppUtils;
 
   const { parseStudentsFromHTML, parseStudentsFromText, parseFileContent } = window.AppParser;
-  const { updateGitHubStatusCard, testGitHubConnection, commitFileToGitHub } = window.AppGitHub;
+  const { updateGitHubStatusCard, testGitHubConnection, commitFileToGitHub, commitMultipleFilesToGitHub } = window.AppGitHub;
 
   /* ==========================================================================
      Загрузка и сохранение данных
@@ -1999,23 +1999,15 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
       const timeStr = new Date().toLocaleString('ru-RU');
       const commitMsg = `Обновление успеваемости (из журнала) — ${timeStr}`;
 
-      await commitFileToGitHub({
+      await commitMultipleFilesToGitHub({
         owner,
         repo,
         branch: branch || 'main',
         token,
-        path: 'data.json',
-        contentStr: jsonContent,
-        commitMessage: commitMsg
-      });
-
-      await commitFileToGitHub({
-        owner,
-        repo,
-        branch: branch || 'main',
-        token,
-        path: 'data.js',
-        contentStr: jsContent,
+        files: [
+          { path: 'data.json', contentStr: jsonContent },
+          { path: 'data.js', contentStr: jsContent }
+        ],
         commitMessage: commitMsg
       });
 

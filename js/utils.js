@@ -169,6 +169,16 @@ window.AppUtils = (function () {
   }
 
   function utf8ToBase64(str) {
+    if (typeof TextEncoder !== 'undefined') {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      const len = bytes.byteLength;
+      const chunkSize = 0x8000;
+      for (let i = 0; i < len; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunkSize, len)));
+      }
+      return window.btoa(binary);
+    }
     return window.btoa(unescape(encodeURIComponent(str)));
   }
 
