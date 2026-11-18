@@ -1,6 +1,6 @@
 /**
  * Автоматически сгенерированные данные электронного журнала
- * Экспортировано: 2026-11-18T13:10:08.334Z
+ * Экспортировано: 2026-11-18T13:14:58.834Z
  */
 window.DEFAULT_REGISTER_DATA = {
   "settings": {
@@ -218,6 +218,15 @@ window.DEFAULT_REGISTER_DATA = {
           "deadline": "2026-10-09T20:59:00.000Z",
           "videoUrl": null,
           "images": null
+        },
+        {
+          "id": "hw-1795007452075",
+          "type": "homework",
+          "title": "Исследовательская работа",
+          "description": "Написать исследовательскую работу",
+          "deadline": "2026-10-23T20:59:00.000Z",
+          "videoUrl": null,
+          "images": null
         }
       ],
       "students": [
@@ -229,8 +238,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -241,8 +251,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -253,8 +264,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -265,8 +277,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -277,8 +290,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -290,7 +304,8 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850160727": null,
             "hw-1794850896668": null,
             "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -301,20 +316,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
-          }
-        },
-        {
-          "id": "s-1794848517090-887",
-          "name": "М. Я. М.",
-          "grades": {
-            "hw-1794849879394": null,
-            "hw-1794850063184": null,
-            "hw-1794850160727": null,
-            "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -326,7 +330,8 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850160727": null,
             "hw-1794850896668": null,
             "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -337,8 +342,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -349,8 +355,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -361,8 +368,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -373,8 +381,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -385,8 +394,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         },
         {
@@ -397,8 +407,9 @@ window.DEFAULT_REGISTER_DATA = {
             "hw-1794850063184": null,
             "hw-1794850160727": null,
             "hw-1794850896668": null,
-            "hw-1795007340333": null,
-            "hw-1795007405538": null
+            "hw-1795007340333": "submitted",
+            "hw-1795007405538": null,
+            "hw-1795007452075": null
           }
         }
       ]
@@ -845,5 +856,5 @@ window.DEFAULT_REGISTER_DATA = {
       ]
     }
   ],
-  "lastModified": 1795007408319
+  "lastModified": 1795007698820
 };
