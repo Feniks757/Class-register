@@ -1323,6 +1323,22 @@ body.modal-open {
   animation: pulseLight 2s infinite ease-in-out;
 }
 
+/* Homework custom text mark badge */
+.badge-hw-text {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 700;
+  max-width: 180px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 /* Classwork text badge */
 .badge-cw-text {
   display: inline-block;
@@ -1350,6 +1366,19 @@ body.modal-open {
   background: white;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
   cursor: pointer;
+}
+
+.inline-hw-input {
+  width: 140px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+  text-align: center;
 }
 
 .inline-cw-input {
@@ -2274,6 +2303,11 @@ body.modal-open {
     font-size: 0.72rem;
     padding: 0.2rem 0.45rem;
     white-space: nowrap;
+  }
+
+  .badge-hw-text {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.45rem;
   }
 
   .badge-cw-text {

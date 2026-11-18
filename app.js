@@ -349,6 +349,26 @@
     });
   }
 
+  function isHwSubmitted(val) {
+    if (val === null || val === undefined) return false;
+    const str = String(val).trim().toLowerCase();
+    if (str === '' || str === 'not_submitted' || str === 'не сдано' || str === '⚠️ не сдано' || str === 'незачет' || str === 'незачёт' || str === 'долг' || str === '—' || str === '-') {
+      return false;
+    }
+    return true;
+  }
+
+  function isHwDebt(val, deadline) {
+    if (val === null || val === undefined || String(val).trim() === '') {
+      return isDeadlinePassed(deadline);
+    }
+    const str = String(val).trim().toLowerCase();
+    if (str === 'not_submitted' || str === 'не сдано' || str === '⚠️ не сдано' || str === 'незачет' || str === 'незачёт' || str === 'долг') {
+      return true;
+    }
+    return false;
+  }
+
   function renderStatistics() {
     const group = getCurrentGroup();
     const studentCountEl = document.getElementById('stat-students-count');
@@ -375,9 +395,9 @@
     group.students.forEach(student => {
       hwList.forEach(assign => {
         const val = student.grades[assign.id];
-        if (val === 'submitted' || val === 'late' || val === 'сдано' || val === 'сдано с опозданием') {
+        if (isHwSubmitted(val)) {
           totalHwSubmitted++;
-        } else if (val === 'not_submitted' || val === 'не сдано' || isDeadlinePassed(assign.deadline)) {
+        } else if (isHwDebt(val, assign.deadline)) {
           overdueDebtsCount++;
         }
       });
@@ -550,9 +570,9 @@
       let studentHwDebts = 0;
       hwList.forEach(a => {
         const v = student.grades[a.id];
-        if (v === 'submitted' || v === 'late' || v === 'сдано' || v === 'сдано с опозданием') {
+        if (isHwSubmitted(v)) {
           studentHwDone++;
-        } else if (v === 'not_submitted' || v === 'не сдано' || isDeadlinePassed(a.deadline)) {
+        } else if (isHwDebt(v, a.deadline)) {
           studentHwDebts++;
         }
       });
@@ -584,16 +604,24 @@
             tdGrade.innerHTML = `<span class="pending-dash">—</span>`;
           }
         } else {
-          // ДОМАШНЕЕ ЗАДАНИЕ: сдано / не сдано / сдано с опозданием
-          if (val === 'submitted' || val === 'сдано') {
-            tdGrade.classList.add('is-graded');
-            tdGrade.innerHTML = `<span class="badge-hw badge-hw-submitted">✓ Сдано</span>`;
-          } else if (val === 'late' || val === 'сдано с опозданием') {
-            tdGrade.classList.add('is-graded');
-            tdGrade.innerHTML = `<span class="badge-hw badge-hw-late">⏰ Сдано с опозданием</span>`;
-          } else if (val === 'not_submitted' || val === 'не сдано') {
-            tdGrade.classList.add('is-overdue');
-            tdGrade.innerHTML = `<span class="badge-hw badge-hw-not-submitted">⚠️ Не сдано</span>`;
+          // ДОМАШНЕЕ ЗАДАНИЕ: поддержка стандартных статусов и любых произвольных текстовых оценок
+          if (val !== null && val !== undefined && String(val).trim() !== '') {
+            const raw = String(val).trim();
+            const lower = raw.toLowerCase();
+            if (lower === 'submitted' || lower === 'сдано' || lower === '✓ сдано') {
+              tdGrade.classList.add('is-graded');
+              tdGrade.innerHTML = `<span class="badge-hw badge-hw-submitted">✓ Сдано</span>`;
+            } else if (lower === 'late' || lower === 'сдано с опозданием' || lower === '⏰ сдано с опозданием') {
+              tdGrade.classList.add('is-graded');
+              tdGrade.innerHTML = `<span class="badge-hw badge-hw-late">⏰ Сдано с опозданием</span>`;
+            } else if (lower === 'not_submitted' || lower === 'не сдано' || lower === '⚠️ не сдано' || lower === 'незачет' || lower === 'незачёт' || lower === 'долг') {
+              tdGrade.classList.add('is-overdue');
+              tdGrade.innerHTML = `<span class="badge-hw badge-hw-not-submitted">⚠️ ${escapeHtml(raw.replace(/^[⚠️\s]+/, '') || 'Не сдано')}</span>`;
+            } else {
+              // Произвольная текстовая отметка (5, 4+, зачёт, 10/10 и др.)
+              tdGrade.classList.add('is-graded');
+              tdGrade.innerHTML = `<span class="badge-hw-text" title="${escapeHtml(raw)}">${escapeHtml(raw)}</span>`;
+            }
           } else {
             // Не выставлено
             if (isPassed) {
@@ -631,32 +659,82 @@
      Редактирование отметок в таблице (Inline)
      ========================================================================== */
 
+  function ensureHwDatalist() {
+    let dl = document.getElementById('hw-grade-options-list');
+    if (!dl) {
+      dl = document.createElement('datalist');
+      dl.id = 'hw-grade-options-list';
+      dl.innerHTML = `
+        <option value="5"></option>
+        <option value="4"></option>
+        <option value="3"></option>
+        <option value="✓ Сдано"></option>
+        <option value="Зачтено"></option>
+        <option value="⏰ Сдано с опозданием"></option>
+        <option value="⚠️ Не сдано"></option>
+      `;
+      document.body.appendChild(dl);
+    }
+  }
+
+  function ensureCwDatalist() {
+    let dl = document.getElementById('cw-grade-options-list');
+    if (!dl) {
+      dl = document.createElement('datalist');
+      dl.id = 'cw-grade-options-list';
+      dl.innerHTML = `
+        <option value="5"></option>
+        <option value="4"></option>
+        <option value="3"></option>
+        <option value="+"></option>
+        <option value="Зачёт"></option>
+        <option value="Был"></option>
+        <option value="Отл"></option>
+        <option value="Н"></option>
+      `;
+      document.body.appendChild(dl);
+    }
+  }
+
   function startInlineHomeworkEdit(cell, studentId, assignId, currentVal) {
-    if (cell.querySelector('.inline-hw-select')) return;
+    if (cell.querySelector('.inline-hw-input')) return;
+
+    ensureHwDatalist();
 
     const originalHTML = cell.innerHTML;
-    const select = document.createElement('select');
-    select.className = 'inline-hw-select';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'inline-hw-input';
+    input.setAttribute('list', 'hw-grade-options-list');
 
-    const normVal = (currentVal === 'сдано' ? 'submitted' : (currentVal === 'сдано с опозданием' ? 'late' : (currentVal === 'не сдано' ? 'not_submitted' : currentVal)));
+    let displayVal = (currentVal !== null && currentVal !== undefined) ? String(currentVal) : '';
+    if (displayVal === 'submitted') displayVal = '✓ Сдано';
+    else if (displayVal === 'late') displayVal = '⏰ Сдано с опозданием';
+    else if (displayVal === 'not_submitted') displayVal = '⚠️ Не сдано';
 
-    select.innerHTML = `
-      <option value="submitted" ${normVal === 'submitted' ? 'selected' : ''}>✓ Сдано</option>
-      <option value="late" ${normVal === 'late' ? 'selected' : ''}>⏰ Сдано с опозданием</option>
-      <option value="not_submitted" ${normVal === 'not_submitted' ? 'selected' : ''}>⚠️ Не сдано</option>
-      <option value="" ${!normVal ? 'selected' : ''}>— В ожидании (сброс)</option>
-    `;
+    input.value = displayVal;
+    input.placeholder = '5, 4, ✓ Сдано...';
 
     cell.innerHTML = '';
-    cell.appendChild(select);
-    select.focus();
+    cell.appendChild(input);
+    input.focus();
+    input.select();
 
     let committed = false;
     const commitChange = () => {
       if (committed) return;
       committed = true;
 
-      const chosen = select.value || null;
+      const rawVal = input.value.trim();
+      let chosen = null;
+      if (rawVal !== '') {
+        const lower = rawVal.toLowerCase();
+        if (lower === '✓ сдано' || lower === 'сдано') chosen = 'submitted';
+        else if (lower === '⏰ сдано с опозданием' || lower === 'сдано с опозданием' || lower === 'late') chosen = 'late';
+        else if (lower === '⚠️ не сдано' || lower === 'не сдано' || lower === 'not_submitted') chosen = 'not_submitted';
+        else chosen = rawVal;
+      }
+
       const group = getCurrentGroup();
       if (!group) return;
       const student = group.students.find(s => s.id === studentId);
@@ -668,9 +746,8 @@
       renderTable();
     };
 
-    select.addEventListener('change', commitChange);
-    select.addEventListener('blur', commitChange);
-    select.addEventListener('keydown', (e) => {
+    input.addEventListener('blur', commitChange);
+    input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') commitChange();
       if (e.key === 'Escape') {
         committed = true;
@@ -682,10 +759,13 @@
   function startInlineClassworkEdit(cell, studentId, assignId, currentVal) {
     if (cell.querySelector('.inline-cw-input')) return;
 
+    ensureCwDatalist();
+
     const originalHTML = cell.innerHTML;
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'inline-cw-input';
+    input.setAttribute('list', 'cw-grade-options-list');
     input.value = (currentVal !== null && currentVal !== undefined) ? currentVal : '';
     input.placeholder = 'Отметка / текст...';
 
@@ -1081,9 +1161,9 @@
       let debtCount = 0;
       group.students.forEach(s => {
         const val = s.grades[assign.id];
-        if (val === 'submitted' || val === 'late' || val === 'сдано' || val === 'сдано с опозданием') {
+        if (isHwSubmitted(val)) {
           passedCount++;
-        } else if (val === 'not_submitted' || val === 'не сдано' || remaining.isPassed) {
+        } else if (isHwDebt(val, assign.deadline)) {
           debtCount++;
         }
       });
