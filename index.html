@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2.3">
+  <link rel="stylesheet" href="styles.css?v=2.4">
 </head>
 <body>
 
@@ -51,6 +51,11 @@
       </div>
 
       <div class="header-actions">
+        <!-- Кнопка быстрой синхронизации/обновления данных с сервера -->
+        <button id="btn-header-sync" class="btn btn-secondary btn-sm header-sync-btn" type="button" title="Проверить и загрузить свежие изменения с GitHub">
+          <span>🔄</span> <span class="header-sync-text">Обновить</span>
+        </button>
+
         <!-- Индикатор группы для студента + кнопка смены группы -->
         <div id="student-unlocked-badge-wrap" style="display: none; align-items: center; gap: 0.5rem;">
           <span class="student-group-badge">
@@ -118,6 +123,9 @@
             </button>
             <button id="btn-open-import" class="btn btn-primary btn-sm btn-action-import" type="button">
               <span>📥</span> Импорт из таблицы
+            </button>
+            <button id="btn-sort-students-alpha" class="btn btn-secondary btn-sm" type="button" title="Отсортировать студентов текущей группы по алфавиту">
+              <span>🔤</span> По алфавиту
             </button>
             <button id="btn-add-assignment" class="btn btn-primary btn-sm" type="button">
               <span>➕</span> Добавить задание
@@ -742,10 +750,10 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Скрипты: данные -> утилиты -> парсер -> github -> app -->
-  <script src="data.js?v=2.3"></script>
-  <script src="js/utils.js?v=2.3"></script>
-  <script src="js/parser.js?v=2.3"></script>
-  <script src="js/github-sync.js?v=2.3"></script>
-  <script src="app.js?v=2.3"></script>
+  <script src="data.js?v=2.4"></script>
+  <script src="js/utils.js?v=2.4"></script>
+  <script src="js/parser.js?v=2.4"></script>
+  <script src="js/github-sync.js?v=2.4"></script>
+  <script src="app.js?v=2.4"></script>
 </body>
 </html>

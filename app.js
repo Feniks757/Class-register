@@ -59,6 +59,62 @@
      Загрузка и сохранение данных
      ========================================================================== */
 
+  function normalizeData(data) {
+    if (!data || !data.groups) return;
+    data.groups.forEach(g => {
+      if (!g.key) g.key = g.name;
+      if (g.assignments) {
+        g.assignments.forEach(a => {
+          if (!a.type) {
+            a.type = a.id && a.id.startsWith('cw-') ? 'classwork' : 'homework';
+          }
+        });
+      }
+      if (g.students) {
+        g.students.forEach(s => {
+          s.name = formatToInitials(s.name);
+          if (s.grades) {
+            Object.keys(s.grades).forEach(gid => {
+              if (s.grades[gid] === 'not_submitted') s.grades[gid] = 'не сдано';
+              else if (s.grades[gid] === 'submitted') s.grades[gid] = 'сдано';
+              else if (s.grades[gid] === 'late') s.grades[gid] = 'сдано с опозданием';
+            });
+          }
+        });
+      }
+    });
+  }
+
+  async function syncDataFromServer(force = false) {
+    try {
+      const resp = await fetch(`data.json?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (!resp.ok) return false;
+      const serverData = await resp.json();
+      if (!serverData || !serverData.groups) return false;
+
+      const localModified = state.data?.lastModified || 0;
+      const serverModified = serverData.lastModified || 0;
+
+      // Если на сервере данные свежее, чем на текущем устройстве, или запрошено принудительное обновление:
+      if (force || serverModified > localModified || !state.data) {
+        state.data = serverData;
+        normalizeData(state.data);
+        saveData(false);
+        renderApp();
+        return true;
+      }
+    } catch (err) {
+      console.log('Синхронизация с сервером не удалась (возможно offline или file://):', err);
+    }
+    return false;
+  }
+
   async function initData() {
     // Очистка устаревших ключей предыдущих версий для полного сброса
     localStorage.removeItem('class_register_data_v1');
@@ -97,7 +153,7 @@
     // 3. Если данных нет, пробуем data.json или data.js
     if (!state.data) {
       try {
-        const resp = await fetch('data.json');
+        const resp = await fetch(`data.json?_t=${Date.now()}`, { cache: 'no-store' });
         if (resp.ok) {
           state.data = await resp.json();
         }
@@ -127,22 +183,8 @@
     }
 
     // Автоматическая нормализация данных (конвертация ФИО в формат инициалов Ф. И. О., установка ключей групп и типов заданий)
-    if (state.data && state.data.groups) {
-      state.data.groups.forEach(g => {
-        if (!g.key) g.key = g.name;
-        if (g.assignments) {
-          g.assignments.forEach(a => {
-            if (!a.type) {
-              a.type = a.id && a.id.startsWith('cw-') ? 'classwork' : 'homework';
-            }
-          });
-        }
-        if (g.students) {
-          g.students.forEach(s => {
-            s.name = formatToInitials(s.name);
-          });
-        }
-      });
+    if (state.data) {
+      normalizeData(state.data);
 
       // Фоновая оптимизация и сжатие тяжелых картинок в базе данных
       if (typeof optimizeRegisterDataImages === 'function') {
@@ -173,6 +215,13 @@
     }
 
     renderApp();
+
+    // 5. Фоновая синхронизация с сервером (подтягивает изменения, если сайт обновлен на GitHub с другого устройства)
+    syncDataFromServer(false).then(updated => {
+      if (updated) {
+        console.log('Данные успешно актуализированы с сервера');
+      }
+    });
   }
 
   function saveData(notify = false) {
@@ -533,31 +582,84 @@
     }
 
     const hwList = group.assignments.filter(a => a.type !== 'classwork');
+    const isFiltered = query.length > 0;
+    let draggedStudentId = null;
 
     filteredStudents.forEach((student, index) => {
       const tr = document.createElement('tr');
       tr.dataset.studentRowId = student.id;
 
+      // Если в режиме администратора и нет поисковой фильтрации — разрешаем Drag & Drop
+      if (state.isAdmin && !isFiltered) {
+        tr.draggable = true;
+
+        tr.addEventListener('dragstart', (e) => {
+          draggedStudentId = student.id;
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', student.id);
+          tr.classList.add('row-dragging');
+        });
+
+        tr.addEventListener('dragend', () => {
+          draggedStudentId = null;
+          tr.classList.remove('row-dragging');
+          document.querySelectorAll('.row-drag-over').forEach(el => el.classList.remove('row-drag-over'));
+        });
+
+        tr.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (draggedStudentId && draggedStudentId !== student.id) {
+            tr.classList.add('row-drag-over');
+          }
+        });
+
+        tr.addEventListener('dragleave', () => {
+          tr.classList.remove('row-drag-over');
+        });
+
+        tr.addEventListener('drop', (e) => {
+          e.preventDefault();
+          tr.classList.remove('row-drag-over');
+          const sourceId = e.dataTransfer.getData('text/plain') || draggedStudentId;
+          if (sourceId && sourceId !== student.id) {
+            reorderStudent(sourceId, student.id);
+          }
+        });
+      }
+
       // Клик по строке для выделения строки студента (голубоватый фон)
       tr.addEventListener('click', (e) => {
         // Если клик был по интерактивным элементам (кнопки, селекты, инпуты) - не переключаем
-        if (e.target.closest('button, select, input, textarea, a')) return;
+        if (e.target.closest('button, select, input, textarea, a, .student-drag-handle-wrap')) return;
         tr.classList.toggle('row-highlighted');
       });
 
       // Номер по порядку
       const tdNum = document.createElement('td');
       tdNum.className = 'col-num';
-      tdNum.textContent = index + 1;
+      if (state.isAdmin && !isFiltered) {
+        tdNum.innerHTML = `<div class="student-drag-handle-wrap" title="Зажмите и перетащите строку для изменения порядка"><span class="student-drag-handle">⋮⋮</span><span>${index + 1}</span></div>`;
+      } else {
+        tdNum.textContent = index + 1;
+      }
       tr.appendChild(tdNum);
 
       // Студент ФИО + кнопки администратора
       const tdStudent = document.createElement('td');
       tdStudent.className = 'col-sticky-student';
+      const isFirst = index === 0;
+      const isLast = index === filteredStudents.length - 1;
+      const moveButtons = (state.isAdmin && !isFiltered) ? `
+        <button class="btn btn-secondary btn-sm btn-move-student" data-move-student="${student.id}" data-dir="up" title="Поднять выше (▲)" ${isFirst ? 'disabled style="opacity:0.35;cursor:not-allowed;"' : ''}>▲</button>
+        <button class="btn btn-secondary btn-sm btn-move-student" data-move-student="${student.id}" data-dir="down" title="Опустить ниже (▼)" ${isLast ? 'disabled style="opacity:0.35;cursor:not-allowed;"' : ''}>▼</button>
+      ` : '';
+
       tdStudent.innerHTML = `
         <div class="student-info-cell">
           <span class="student-name">${escapeHtml(student.name)}</span>
           <div class="student-admin-actions">
+            ${moveButtons}
             <button class="btn btn-secondary btn-sm" style="padding: 2px 5px; font-size: 0.72rem;" data-edit-student="${student.id}" title="Редактировать ФИО">✎</button>
             <button class="btn btn-outline-danger btn-sm" style="padding: 2px 5px; font-size: 0.72rem;" data-delete-student="${student.id}" title="Удалить студента">🗑</button>
           </div>
@@ -614,9 +716,12 @@
             } else if (lower === 'late' || lower === 'сдано с опозданием' || lower === '⏰ сдано с опозданием') {
               tdGrade.classList.add('is-graded');
               tdGrade.innerHTML = `<span class="badge-hw badge-hw-late">⏰ Сдано с опозданием</span>`;
-            } else if (lower === 'not_submitted' || lower === 'не сдано' || lower === '⚠️ не сдано' || lower === 'незачет' || lower === 'незачёт' || lower === 'долг') {
+            } else if (lower === 'not_submitted' || lower === 'не сдано' || lower === '⚠️ не сдано') {
               tdGrade.classList.add('is-overdue');
-              tdGrade.innerHTML = `<span class="badge-hw badge-hw-not-submitted">⚠️ ${escapeHtml(raw.replace(/^[⚠️\s]+/, '') || 'Не сдано')}</span>`;
+              tdGrade.innerHTML = `<span class="badge-hw badge-hw-not-submitted">⚠️ Не сдано</span>`;
+            } else if (lower === 'незачет' || lower === 'незачёт' || lower === 'долг') {
+              tdGrade.classList.add('is-overdue');
+              tdGrade.innerHTML = `<span class="badge-hw badge-hw-not-submitted">⚠️ ${escapeHtml(raw.replace(/^[⚠️\s]+/, ''))}</span>`;
             } else {
               // Произвольная текстовая отметка (5, 4+, зачёт, 10/10 и др.)
               tdGrade.classList.add('is-graded');
@@ -708,9 +813,9 @@
     input.setAttribute('list', 'hw-grade-options-list');
 
     let displayVal = (currentVal !== null && currentVal !== undefined) ? String(currentVal) : '';
-    if (displayVal === 'submitted') displayVal = '✓ Сдано';
-    else if (displayVal === 'late') displayVal = '⏰ Сдано с опозданием';
-    else if (displayVal === 'not_submitted') displayVal = '⚠️ Не сдано';
+    if (displayVal === 'submitted' || displayVal === 'сдано') displayVal = '✓ Сдано';
+    else if (displayVal === 'late' || displayVal === 'сдано с опозданием') displayVal = '⏰ Сдано с опозданием';
+    else if (displayVal === 'not_submitted' || displayVal === 'не сдано') displayVal = '⚠️ Не сдано';
 
     input.value = displayVal;
     input.placeholder = '5, 4, ✓ Сдано...';
@@ -729,10 +834,15 @@
       let chosen = null;
       if (rawVal !== '') {
         const lower = rawVal.toLowerCase();
-        if (lower === '✓ сдано' || lower === 'сдано') chosen = 'submitted';
-        else if (lower === '⏰ сдано с опозданием' || lower === 'сдано с опозданием' || lower === 'late') chosen = 'late';
-        else if (lower === '⚠️ не сдано' || lower === 'не сдано' || lower === 'not_submitted') chosen = 'not_submitted';
-        else chosen = rawVal;
+        if (lower === '✓ сдано' || lower === 'сдано' || lower === 'submitted') {
+          chosen = 'сдано';
+        } else if (lower === '⏰ сдано с опозданием' || lower === 'сдано с опозданием' || lower === 'late') {
+          chosen = 'сдано с опозданием';
+        } else if (lower === '⚠️ не сдано' || lower === 'не сдано' || lower === 'not_submitted') {
+          chosen = 'не сдано';
+        } else {
+          chosen = rawVal;
+        }
       }
 
       const group = getCurrentGroup();
@@ -1663,9 +1773,7 @@
         newStudent.grades[a.id] = null;
       });
       group.students.push(newStudent);
-      // Сортируем студентов по алфавиту
-      group.students.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-      showToast(`Студент ${formattedName} добавлен`, 'success');
+      showToast(`Студент ${formattedName} добавлен в конец списка`, 'success');
     }
 
     saveData();
@@ -1688,6 +1796,57 @@
     saveData();
     renderApp();
     showToast(`Студент "${student.name}" удалён`, 'info');
+  }
+
+  function moveStudent(studentId, direction) {
+    const group = getCurrentGroup();
+    if (!group || !group.students) return;
+
+    const idx = group.students.findIndex(s => s.id === studentId);
+    if (idx === -1) return;
+
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= group.students.length) return;
+
+    const temp = group.students[idx];
+    group.students[idx] = group.students[targetIdx];
+    group.students[targetIdx] = temp;
+
+    saveData();
+    renderTable();
+  }
+
+  function reorderStudent(draggedStudentId, targetStudentId) {
+    const group = getCurrentGroup();
+    if (!group || !group.students) return;
+
+    const fromIndex = group.students.findIndex(s => s.id === draggedStudentId);
+    const toIndex = group.students.findIndex(s => s.id === targetStudentId);
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+    const [movedStudent] = group.students.splice(fromIndex, 1);
+    group.students.splice(toIndex, 0, movedStudent);
+
+    saveData();
+    renderTable();
+    showToast('Порядок студентов изменён', 'info');
+  }
+
+  function sortCurrentGroupAlphabetically() {
+    const group = getCurrentGroup();
+    if (!group || !group.students || group.students.length === 0) {
+      showToast('В текущей группе нет студентов', 'info');
+      return;
+    }
+
+    if (!confirm(`Отсортировать студентов группы "${group.name}" по алфавиту?`)) {
+      return;
+    }
+
+    group.students.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    saveData();
+    renderTable();
+    showToast(`Студенты группы ${group.name} отсортированы по алфавиту`, 'success');
   }
 
   /* ==========================================================================
@@ -2028,8 +2187,6 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
       }
     });
 
-    targetGroup.students.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-
     state.currentGroupId = targetGroup.id;
     saveData();
     closeModal('modal-import-students');
@@ -2087,6 +2244,9 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
       }
 
       showToast('Создание коммита на GitHub...', 'info');
+
+      state.data.lastModified = Date.now();
+      saveData(false);
 
       const jsonContent = JSON.stringify(state.data, null, 2);
       const jsContent = `/**\n * Автоматически сгенерированные данные электронного журнала\n * Экспортировано: ${new Date().toISOString()}\n */\nwindow.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};\n`;
@@ -2162,10 +2322,38 @@ window.DEFAULT_REGISTER_DATA = ${JSON.stringify(state.data, null, 2)};
         deleteStudent(btn.dataset.deleteStudent);
       };
     });
+
+    // Перемещение студента вверх/вниз
+    document.querySelectorAll('[data-move-student]').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        if (btn.disabled) return;
+        moveStudent(btn.dataset.moveStudent, btn.dataset.dir);
+      };
+    });
   }
 
   // Привязка основных элементов интерфейса
   function setupEventListeners() {
+    // Синхронизация данных с сервера (кнопка в шапке)
+    document.getElementById('btn-header-sync')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-header-sync');
+      if (btn) btn.disabled = true;
+      showToast('Проверяем обновления на сервере...', 'info');
+      const updated = await syncDataFromServer(true);
+      if (btn) btn.disabled = false;
+      if (updated) {
+        showToast('Данные успешно обновлены с сервера!', 'success');
+      } else {
+        showToast('У вас уже установлена самая актуальная версия данных', 'info');
+      }
+    });
+
+    // Сортировка студентов текущей группы по алфавиту
+    document.getElementById('btn-sort-students-alpha')?.addEventListener('click', () => {
+      sortCurrentGroupAlphabetically();
+    });
+
     // Вход студента по ключу группы
     document.getElementById('form-student-gate')?.addEventListener('submit', (e) => {
       e.preventDefault();

@@ -774,10 +774,67 @@ body.modal-open {
 .student-admin-actions {
   display: none;
   gap: 0.25rem;
+  align-items: center;
 }
 
 .admin-mode-active .student-admin-actions {
   display: flex;
+}
+
+/* Перемещение студентов (кнопки и Drag & Drop) */
+.student-drag-handle-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: grab;
+  user-select: none;
+  width: 100%;
+}
+
+.student-drag-handle-wrap:active {
+  cursor: grabbing;
+}
+
+.student-drag-handle {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: bold;
+  letter-spacing: -1px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  line-height: 1;
+}
+
+.gradebook-table tbody tr:hover .student-drag-handle {
+  opacity: 1;
+  color: var(--primary);
+}
+
+.btn-move-student {
+  padding: 1px 4px !important;
+  font-size: 0.65rem !important;
+  line-height: 1 !important;
+  min-width: 20px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+tr.row-dragging {
+  opacity: 0.45;
+  background-color: #e0e7ff !important;
+}
+
+tr.row-drag-over td {
+  border-top: 3px solid var(--primary) !important;
+}
+
+.header-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 /* Total score cell */
